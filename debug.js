@@ -1,52 +1,64 @@
-// Debug test script for breadcrumb detector
+/**
+ * Debug Script - React UX Analyzer
+ * 
+ * This script tests both BreadcrumbDetector and LoadingDetector
+ * using the new centralized FeedbackHelper for consistent output.
+ */
+
 const fs = require('fs');
-const BreadcrumbDetector = require('./heuristics/visibility_system_status/breadcrumb-detector');
+const BreadcrumbDetector = require('./heuristics/visibility-system-status/breadcrumb-detector');
+const LoadingDetector = require('./heuristics/visibility-system-status/loading-detector');
+const StandaloneFeedbackHelper = require('./test/test-feedback-helper');
 
-function runDebugTests() {
-    console.log('🔍 RUNNING BREADCRUMB DEBUG TESTS');
-    console.log('==================================\n');
-    
-    const detector = new BreadcrumbDetector();
-    
-    try {
-        // Test 1: Bad breadcrumbs
-        console.log('1️⃣  Testing BAD breadcrumbs:');
-        console.log('📄 File: bad-breadcrumbs.jsx');
+console.log('🧪 React UX Analyzer - Debug Mode\n');
+
+// Test files
+const testFiles = [
+    './test/test-breadcrumbs/bad-breadcrumbs.jsx',
+    './test/test-breadcrumbs/mixed-breadcrumbs.jsx',
+    './test/test-loading/bad-loading.jsx',
+    './test/test-loading/mixed-loading.jsx'
+];
+
+const breadcrumbDetector = new BreadcrumbDetector();
+const loadingDetector = new LoadingDetector();
+
+testFiles.forEach(file => {
+    if (fs.existsSync(file)) {
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`📄 Analyzing: ${file}`);
+        console.log(`${'='.repeat(60)}\n`);
         
-        const badFile = fs.readFileSync('./test/test_breadcrumbs/bad-breadcrumbs.jsx', 'utf8');
-        const badResults = detector.detectBreadcrumbs(badFile);
-        const badMissing = badResults.filter(r => r.type === 'missing-breadcrumb');
+        const content = fs.readFileSync(file, 'utf8');
         
-        console.log(`❌ Found ${badMissing.length} missing breadcrumbs:\n`);
-        badMissing.forEach((result, index) => {
-            console.log(`${index + 1}. Line ${result.line}: ${result.type}`);
-            console.log(`   Content: ${result.content}`);
-            console.log(`   Message: ${result.message}\n`);
-        });
+        // Test breadcrumb detection
+        if (file.includes('breadcrumb')) {
+            const patterns = breadcrumbDetector.detectBreadcrumbs(content);
+            const issues = patterns.filter(p => p.type === 'missing-breadcrumb');
+            
+            StandaloneFeedbackHelper.showResults({
+                analysisType: 'BREADCRUMB',
+                fileName: file,
+                issues: issues,
+                issueLabel: 'MISSING BREADCRUMBS'
+            });
+        }
         
-        // Test 2: Mixed breadcrumbs
-        console.log('2️⃣  Testing MIXED breadcrumbs:');
-        console.log('📄 File: mixed-breadcrumbs.jsx');
-        
-        const mixedFile = fs.readFileSync('./test/test_breadcrumbs/mixed-breadcrumbs.jsx', 'utf8');
-        const mixedResults = detector.detectBreadcrumbs(mixedFile);
-        const mixedMissing = mixedResults.filter(r => r.type === 'missing-breadcrumb');
-        const mixedGood = mixedResults.filter(r => r.type === 'good-breadcrumb');
-        
-        console.log(`✅ Found ${mixedGood.length} good breadcrumbs`);
-        console.log(`❌ Found ${mixedMissing.length} missing breadcrumbs:\n`);
-        
-        mixedMissing.forEach((result, index) => {
-            console.log(`${index + 1}. Line ${result.line}: ${result.type}`);
-            console.log(`   Content: ${result.content}`);
-            console.log(`   Message: ${result.message}\n`);
-        });
-        
-    } catch (error) {
-        console.error('❌ Debug test failed:', error.message);
-        console.error('Stack trace:', error.stack);
+        // Test loading detection
+        if (file.includes('loading')) {
+            const patterns = loadingDetector.detectLoadingPatterns(content);
+            const issues = StandaloneFeedbackHelper.filterIssues(patterns);
+            
+            StandaloneFeedbackHelper.showResults({
+                analysisType: 'LOADING',
+                fileName: file,
+                issues: issues,
+                issueLabel: 'LOADING ISSUES'
+            });
+        }
     }
-}
+});
 
-// Run the debug tests
-runDebugTests();
+console.log(`\n${'='.repeat(60)}`);
+console.log('✅ Debug complete!');
+console.log(`${'='.repeat(60)}`);

@@ -6,20 +6,36 @@ This directory contains detection algorithms for Nielsen's 10 Usability Heuristi
 
 ```
 heuristics/
-├── index.js                           # Main export file
-├── visibility_system_status/          # Heuristic #1: Visibility of System Status
-│   ├── breadcrumb-detector.js         # Breadcrumb pattern detection
-│   └── BREADCRUMB_DETECTION.md        # Documentation
-├── match_system_real_world/           # Heuristic #2: Match between system and real world
-├── user_control_freedom/              # Heuristic #3: User control and freedom
-├── consistency_standards/             # Heuristic #4: Consistency and standards
-├── error_prevention/                  # Heuristic #5: Error prevention
-├── recognition_recall/                # Heuristic #6: Recognition rather than recall
-├── flexibility_efficiency/            # Heuristic #7: Flexibility and efficiency of use
-├── aesthetic_minimalist/              # Heuristic #8: Aesthetic and minimalist design
-├── error_recovery/                    # Heuristic #9: Help users recognize, diagnose, and recover from errors
-└── help_documentation/                # Heuristic #10: Help and documentation
+├── index.js                              # Main export file
+├── visibility-system-status/             # Heuristic #1: Visibility of System Status
+│   ├── breadcrumb-detector.js            # Detects breadcrumb navigation patterns
+│   ├── BREADCRUMB-DETECTION.md           # Breadcrumb detector documentation
+│   ├── loading-detector.js               # Detects loading states and feedback
+│   └── LOADING-DETECTION.md              # Loading detector documentation
+├── match-system-real-world/              # Heuristic #2: Match between system and real world
+├── user-control-freedom/                 # Heuristic #3: User control and freedom
+├── consistency-standards/                # Heuristic #4: Consistency and standards
+├── error-prevention/                     # Heuristic #5: Error prevention
+├── recognition-recall/                   # Heuristic #6: Recognition rather than recall
+├── flexibility-efficiency/               # Heuristic #7: Flexibility and efficiency of use
+├── aesthetic-minimalist/                 # Heuristic #8: Aesthetic and minimalist design
+├── error-recovery/                       # Heuristic #9: Help users recognize, diagnose, and recover from errors
+└── help-documentation/                   # Heuristic #10: Help and documentation
 ```
+
+## Available Detectors
+
+### 🔍 Visibility of System Status (Heuristic #1)
+
+**Breadcrumb Detector** (`breadcrumb-detector.js`)
+- Finds breadcrumb navigation components
+- Detects missing navigation context
+- [Documentation](./visibility-system-status/BREADCRUMB-DETECTION.md)
+
+**Loading Detector** (`loading-detector.js`)  
+- Identifies loading states and indicators
+- Warns about missing loading feedback
+- [Documentation](./visibility-system-status/LOADING-DETECTION.md)
 
 ## Nielsen's 10 Usability Heuristics
 

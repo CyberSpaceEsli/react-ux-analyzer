@@ -24,6 +24,11 @@
         "command": "react-ux-analyzer.analyzeBreadcrumbs",
         "title": "Analyze Breadcrumbs (Nielsen #1: Visibility & System Status)",
         "category": "React UX Analyzer"
+      },
+      {
+        "command": "react-ux-analyzer.analyzeLoading",
+        "title": "Analyze Loading States (Nielsen #1: Visibility & System Status)",
+        "category": "React UX Analyzer"
       }
     ],
     "menus": {
@@ -32,12 +37,22 @@
           "when": "resourceExtname == .jsx || resourceExtname == .tsx || resourceExtname == .js || resourceExtname == .ts",
           "command": "react-ux-analyzer.analyzeBreadcrumbs",
           "group": "navigation"
+        },
+        {
+          "when": "resourceExtname == .jsx || resourceExtname == .tsx || resourceExtname == .js || resourceExtname == .ts",
+          "command": "react-ux-analyzer.analyzeLoading",
+          "group": "navigation"
         }
       ],
       "editor/context": [
         {
           "when": "resourceExtname == .jsx || resourceExtname == .tsx || resourceExtname == .js || resourceExtname == .ts",
           "command": "react-ux-analyzer.analyzeBreadcrumbs",
+          "group": "navigation"
+        },
+        {
+          "when": "resourceExtname == .jsx || resourceExtname == .tsx || resourceExtname == .js || resourceExtname == .ts",
+          "command": "react-ux-analyzer.analyzeLoading",
           "group": "navigation"
         }
       ]

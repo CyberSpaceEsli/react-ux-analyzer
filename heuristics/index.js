@@ -1,23 +1,16 @@
 /**
- * Simple Heuristics Module
+ * React UX Analyzer - Heuristics Module
  * 
- * This file makes it easy to import our detection algorithms.
- * Currently we only have breadcrumb detection, but more will be added later.
- * 
- * Usage example:
- * const { BreadcrumbDetector } = require('./heuristics');
- * const detector = new BreadcrumbDetector();
+ * This module exports all UX heuristic detectors for the React UX Analyzer extension.
+ * Currently implements Nielsen's Heuristic #1: Visibility of System Status
  */
 
-// Import our breadcrumb detection class
-const BreadcrumbDetector = require('./visibility_system_status/breadcrumb-detector');
+const BreadcrumbDetector = require('./visibility-system-status/breadcrumb-detector');
+const LoadingDetector = require('./visibility-system-status/loading-detector');
+const FeedbackHandler = require('./feedback-handler');
 
-// Export it so other files can use it
 module.exports = {
-    BreadcrumbDetector
-    
-    // Future detectors will be added here:
-    // FormValidationDetector,
-    // ErrorMessageDetector,
-    // etc.
+    BreadcrumbDetector,
+    LoadingDetector,
+    FeedbackHandler
 };
