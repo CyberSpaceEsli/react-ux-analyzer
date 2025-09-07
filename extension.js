@@ -1,36 +1,87 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-const vscode = require('vscode');
-
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-
 /**
- * @param {vscode.ExtensionContext} context
+ * React UX Analyzer Extension - SIMPLE VERSION
  */
+const vscode = require('vscode');
+const { BreadcrumbDetector } = require('./heuristics');
+
 function activate(context) {
+    console.log('🚀 React UX Analyzer extension is active!');
+    vscode.window.showInformationMessage('✅ React UX Analyzer loaded!');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "react-ux-analyzer" is now active!');
+    const detector = new BreadcrumbDetector();
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with  registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('react-ux-analyzer.helloWorld', function () {
-		// The code you place here will be executed every time your command is executed
+    // Hello World command
+    const helloCommand = vscode.commands.registerCommand('react-ux-analyzer.helloWorld', () => {
+        vscode.window.showInformationMessage('🎉 Hello from React UX Analyzer!');
+    });
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from react-ux-analyzer!');
-	});
+    // Analyze Breadcrumbs command
+    const analyzeCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeBreadcrumbs', () => {
+        try {
+            console.log('🔍 Starting analysis...');
+            
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showErrorMessage('❌ Please open a file first!');
+                return;
+            }
 
-	context.subscriptions.push(disposable);
+            const document = editor.document;
+            const content = document.getText();
+            const fileName = document.fileName;
+            
+            console.log('📄 Analyzing:', fileName);
+            
+            const patterns = detector.detectBreadcrumbs(content);
+            
+            // Filter only missing breadcrumbs for clear output
+            const missingBreadcrumbs = patterns.filter(p => p.type === 'missing-breadcrumb');
+            
+            console.log('✅ Found:', patterns.length, 'patterns');
+            console.log('❌ Missing breadcrumbs:', missingBreadcrumbs.length);
+            
+            showResults(fileName, missingBreadcrumbs);
+            
+        } catch (error) {
+            console.error('❌ Error:', error);
+            vscode.window.showErrorMessage('Analysis failed: ' + error.message);
+        }
+    });
+
+    context.subscriptions.push(helloCommand);
+    context.subscriptions.push(analyzeCommand);
+    
+    console.log('✅ Commands registered!');
 }
 
-// This method is called when your extension is deactivated
+function showResults(fileName, missingBreadcrumbs) {
+    const outputChannel = vscode.window.createOutputChannel('React UX Analyzer');
+    outputChannel.clear();
+    
+    outputChannel.appendLine('=== BREADCRUMB ANALYSIS ===');
+    outputChannel.appendLine(`File: ${fileName}`);
+    outputChannel.appendLine(`Missing breadcrumbs: ${missingBreadcrumbs.length}`);
+    outputChannel.appendLine('');
+    
+    if (missingBreadcrumbs.length > 0) {
+        outputChannel.appendLine('❌ MISSING BREADCRUMBS:');
+        missingBreadcrumbs.forEach((pattern, index) => {
+            outputChannel.appendLine(`${index + 1}. Line ${pattern.line}: ${pattern.type}`);
+            outputChannel.appendLine(`   Content: ${pattern.content}`);
+            outputChannel.appendLine(`   Message: ${pattern.message}`);
+            outputChannel.appendLine('');
+        });
+    }
+    
+    outputChannel.show();
+    
+    if (missingBreadcrumbs.length > 0) {
+        vscode.window.showWarningMessage(`Found ${missingBreadcrumbs.length} breadcrumb issues! Check output panel.`);
+    } else {
+        vscode.window.showInformationMessage('No breadcrumb issues found!');
+    }
+}
+
 function deactivate() {}
 
-module.exports = {
-	activate,
-	deactivate
-}
+module.exports = { activate, deactivate };

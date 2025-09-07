@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "*.jsx": "javascriptreact",
+        "*.js": "javascriptreact"
+    },
+    "emmet.includeLanguages": {
+        "javascript": "javascriptreact"
+    },
+    "emmet.triggerExpansionOnTab": true,
+    "javascript.validate.enable": true,
+    "typescript.preferences.includePackageJsonAutoImports": "auto"
+}

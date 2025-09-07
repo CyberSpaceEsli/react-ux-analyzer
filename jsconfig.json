@@ -3,10 +3,19 @@
 		"module": "Node16",
 		"target": "ES2022",
 		"checkJs": true,  /* Typecheck .js files. */
+		"jsx": "react-jsx",  /* Enable JSX support */
+		"allowSyntheticDefaultImports": true,
 		"lib": [
-			"ES2022"
+			"ES2022",
+			"DOM"
 		]
 	},
+	"include": [
+		"**/*.js",
+		"**/*.jsx",
+		"**/*.ts",
+		"**/*.tsx"
+	],
 	"exclude": [
 		"node_modules"
 	]
