@@ -6,8 +6,9 @@ This directory contains detection algorithms for Nielsen's 10 Usability Heuristi
 
 ```
 heuristics/
-├── index.js                              # Main export file
-├── visibility-system-status/             # Heuristic #1: Visibility of System Status
+├── index.js                              # Main module export
+├── feedback-handler.js                   # Centralized feedback system
+├── 1-visibility-system-status/             # Heuristic #1: Visibility of System Status
 │   ├── breadcrumb-detector.js            # Detects breadcrumb navigation patterns
 │   ├── BREADCRUMB-DETECTION.md           # Breadcrumb detector documentation
 │   ├── loading-detector.js               # Detects loading states and feedback
@@ -30,17 +31,17 @@ heuristics/
 **Breadcrumb Detector** (`breadcrumb-detector.js`)
 - Finds breadcrumb navigation components
 - Detects missing navigation context
-- [Documentation](./visibility-system-status/BREADCRUMB-DETECTION.md)
+- [Documentation](./1-visibility-system-status/BREADCRUMB-DETECTION.md)
 
 **Loading Detector** (`loading-detector.js`)  
 - Identifies loading states and indicators
 - Warns about missing loading feedback
-- [Documentation](./visibility-system-status/LOADING-DETECTION.md)
+- [Documentation](./1-visibility-system-status/LOADING-DETECTION.md)
 
 ## Nielsen's 10 Usability Heuristics
 
 ### ✅ Implemented:
-1. **Visibility of System Status** - `visibility_system_status/`
+1. **Visibility of System Status** - `1-visibility-system-status/`
    - Breadcrumb Detection: Identifies navigation patterns that help users understand their location
 
 ### 🔄 Planned:
