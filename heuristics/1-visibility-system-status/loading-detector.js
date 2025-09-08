@@ -1,79 +1,229 @@
+const { parse } = require("@babel/parser");
+const traverse = require("@babel/traverse").default;
+
 /**
- * Loading State Detector
+ * Loading State Detector for React UX Analysis
  * 
- * This class analyzes JSX/React code to find loading states and indicators.
- * Proper loading feedback helps users understand system status (Nielsen Heuristic #1).
+ * Detects missing loading feedback in React components (Nielsen Heuristic #1: Visibility of System Status)
  * 
- * What it does:
- * - Scans through JSX code for loading components and patterns
- * - Identifies loading states, spinners, progress bars, and skeleton screens
- * - Reports missing loading feedback as warnings
- * - Detects good practices like loading indicators during async operations
+ * Features:
+ * - AST-based analysis for comprehensive component scanning
+ * - Detects API calls without loading feedback
+ * - Finds good loading practices (spinners, progress bars, skeleton screens)
+ * - Reports form submissions without loading states
  */
 class LoadingDetector {
     
-    /**
-     * Main function to detect loading patterns in JSX code
-     * 
-     * @param {string} content - The complete JSX file content as a string
-     * @returns {Array} - List of found patterns with details
-     */
     detectLoadingPatterns(content) {
-        // Array to store all patterns we find
         const foundPatterns = [];
         
-        // Split the content into individual lines for easier analysis
-        const lines = content.split('\n');
-        
-        // Go through each line one by one
-        for (let i = 0; i < lines.length; i++) {
-            const currentLine = lines[i];
-            const lineNumber = i + 1; // Line numbers start at 1, not 0
+        try {
+            // AST Analysis: Component-level detection
+            const astPatterns = this.performASTAnalysis(content);
+            foundPatterns.push(...astPatterns);
             
-            // Check for different loading patterns
-            this.checkForLoadingComponents(currentLine, lineNumber, foundPatterns);
-            this.checkForLoadingStates(currentLine, lineNumber, foundPatterns);
-            this.checkForProgressIndicators(currentLine, lineNumber, foundPatterns);
-            this.checkForSkeletonScreens(currentLine, lineNumber, foundPatterns);
-            this.checkForMissingLoadingFeedback(currentLine, lineNumber, foundPatterns, lines, i);
+            // Line-by-line Analysis: Specific pattern detection
+            const linePatterns = this.performLineAnalysis(content);
+            foundPatterns.push(...linePatterns);
+            
+        } catch (error) {
+            console.warn('Loading detector analysis failed:', error.message);
         }
         
         return foundPatterns;
     }
     
-    /**
-     * Look for loading component names like <Spinner>, <Loader>, <Loading>, etc.
-     * 
-     * @param {string} line - The current line of code
-     * @param {number} lineNumber - Which line we're checking
-     * @param {Array} patterns - Array to add found patterns to
-     */
-    checkForLoadingComponents(line, lineNumber, patterns) {
-        // COMPREHENSIVE loading component detection for React web apps
+    // ===============================================
+    // AST ANALYSIS - Component Level Detection
+    // ===============================================
+    
+    performASTAnalysis(content) {
+        const patterns = [];
+        const components = new Map();
         
-        // 1. Common Loading component names
-        const loadingComponentPattern = /<(Loading|Loader|Spinner|SpinLoader|CircularProgress|LinearProgress|ProgressBar|Preloader|LoadingSpinner|LoadingIndicator|ActivityIndicator)\s/;
+        const ast = parse(content, {
+            sourceType: "module",
+            plugins: ["jsx", "typescript"]
+        });
         
-        // 2. Components with loading classes
-        const loadingClassPattern = /<[^>]+className="[^"]*\b(loading|spinner|loader|progress|preloader|skeleton|shimmer|placeholder)/;
+        // Step 1: Find all React components/functions
+        this.findComponents(ast, components);
         
-        // 3. Loading icons and symbols
-        const loadingIconPattern = /<[^>]+\b(icon|Icon)="[^"]*\b(loading|spinner|refresh|sync|clock|hourglass)/;
+        // Step 2: Analyze each component for API calls and loading patterns
+        this.analyzeComponentPatterns(ast, components);
         
-        // 4. Conditional loading rendering
-        const conditionalLoadingPattern = /\{.*\bisLoading\b.*\?.*(<[^>]*loading|<Loading|<Spinner|loading)/;
+        // Step 3: Generate warnings for components with missing loading feedback
+        this.generateComponentWarnings(components, patterns);
         
-        // 5. Loading text indicators
-        const loadingTextPattern = /(Loading\.\.\.|Please wait|Fetching|Processing|Submitting)/;
+        return patterns;
+    }
+    
+    findComponents(ast, components) {
+        traverse(ast, {
+            FunctionDeclaration(path) {
+                const name = path.node.id ? path.node.id.name : 'anonymous';
+                const line = path.node.loc ? path.node.loc.start.line : 1;
+                
+                components.set(name, {
+                    line: line,
+                    name: name,
+                    hasAPICall: false,
+                    hasLoadingState: false,
+                    hasLoadingUI: false
+                });
+            }
+        });
+    }
+    
+    analyzeComponentPatterns(ast, components) {
+        traverse(ast, {
+            // Detect API calls (fetch, axios, custom API functions)
+            CallExpression: (path) => this.detectAPICalls(path, components),
+            
+            // Detect loading states (useState with loading variables)
+            VariableDeclarator: (path) => this.detectLoadingStates(path, components),
+            
+            // Detect loading UI components (<Spinner>, <Loading>, etc.)
+            JSXElement: (path) => this.detectLoadingUI(path, components),
+            
+            // Detect loading text ("Loading...", "Please wait", etc.)
+            JSXText: (path) => this.detectLoadingText(path, components)
+        });
+    }
+    
+    detectAPICalls(path, components) {
+        const callee = path.node.callee;
+        const line = path.node.loc ? path.node.loc.start.line : 1;
         
-        const hasLoadingComponent = loadingComponentPattern.test(line) || 
-                                  loadingClassPattern.test(line) || 
-                                  loadingIconPattern.test(line) ||
-                                  conditionalLoadingPattern.test(line) ||
-                                  loadingTextPattern.test(line);
+        const isAPICall = 
+            // fetch() calls
+            (callee.type === "Identifier" && callee.name === "fetch") ||
+            // axios.get(), axios.post(), etc.
+            (callee.type === "MemberExpression" && 
+             callee.object.type === "Identifier" && 
+             callee.object.name === "axios") ||
+            // Custom API functions (fetchUser, getData, etc.)
+            (callee.type === "Identifier" && 
+             (callee.name.includes('fetch') || callee.name.includes('API') || callee.name.includes('api')));
         
-        if (hasLoadingComponent) {
-            // We found a loading component - this is good!
+        if (isAPICall) {
+            this.markComponentFeature(components, line, 'hasAPICall');
+        }
+    }
+    
+    detectLoadingStates(path, components) {
+        if (!this.isUseStateCall(path)) return;
+        
+        const variableName = this.getVariableName(path);
+        if (variableName && /loading/i.test(variableName)) {
+            const line = path.node.loc ? path.node.loc.start.line : 1;
+            this.markComponentFeature(components, line, 'hasLoadingState');
+        }
+    }
+    
+    detectLoadingUI(path, components) {
+        const componentName = path.node.openingElement.name;
+        if (componentName.type === "JSXIdentifier") {
+            const loadingComponents = [
+                "Loader", "Spinner", "Skeleton", "Progress", "Loading", 
+                "LoadingIndicator", "CircularProgress", "LinearProgress"
+            ];
+            
+            if (loadingComponents.includes(componentName.name)) {
+                const line = path.node.loc ? path.node.loc.start.line : 1;
+                this.markComponentFeature(components, line, 'hasLoadingUI');
+            }
+        }
+    }
+    
+    detectLoadingText(path, components) {
+        if (/loading/i.test(path.node.value)) {
+            const line = path.node.loc ? path.node.loc.start.line : 1;
+            this.markComponentFeature(components, line, 'hasLoadingUI');
+        }
+    }
+    
+    // Helper methods for AST analysis
+    isUseStateCall(path) {
+        return path.node.init &&
+               path.node.init.type === "CallExpression" &&
+               path.node.init.callee &&
+               path.node.init.callee.type === "Identifier" &&
+               path.node.init.callee.name === "useState";
+    }
+    
+    getVariableName(path) {
+        if (path.node.id.type === "ArrayPattern" &&
+            path.node.id.elements &&
+            path.node.id.elements[0] &&
+            path.node.id.elements[0].type === "Identifier") {
+            return path.node.id.elements[0].name;
+        }
+        return null;
+    }
+    
+    markComponentFeature(components, line, feature) {
+        components.forEach((component) => {
+            if (line >= component.line) {
+                component[feature] = true;
+            }
+        });
+    }
+    
+    generateComponentWarnings(components, patterns) {
+        components.forEach((component) => {
+            if (component.hasAPICall && !component.hasLoadingState && !component.hasLoadingUI) {
+                patterns.push({
+                    type: "loader-missing-ast",
+                    line: component.line,
+                    content: `function ${component.name}() {`,
+                    message: `Component '${component.name}' has API calls but no loading feedback. Consider adding loading states or UI indicators.`,
+                    severity: "warning"
+                });
+            }
+        });
+    }
+    
+    // ===============================================
+    // LINE ANALYSIS - Specific Pattern Detection
+    // ===============================================
+    
+    performLineAnalysis(content) {
+        const patterns = [];
+        const lines = content.split('\n');
+        
+        lines.forEach((line, index) => {
+            const lineNumber = index + 1;
+            
+            // Find good loading practices
+            this.findGoodLoadingComponents(line, lineNumber, patterns);
+            this.findGoodLoadingStates(line, lineNumber, patterns);
+            this.findProgressIndicators(line, lineNumber, patterns);
+            this.findSkeletonScreens(line, lineNumber, patterns);
+            
+            // Find missing loading feedback
+            this.findMissingFormFeedback(line, lineNumber, patterns, lines, index);
+            this.findMissingEffectFeedback(line, lineNumber, patterns, lines, index);
+        });
+        
+        return patterns;
+    }
+    
+    findGoodLoadingComponents(line, lineNumber, patterns) {
+        const patterns_to_check = [
+            // Loading component names
+            /<(Loading|Loader|Spinner|SpinLoader|CircularProgress|LinearProgress|ProgressBar|Preloader|LoadingSpinner|LoadingIndicator|ActivityIndicator)\s/,
+            // Loading CSS classes
+            /<[^>]+className="[^"]*\b(loading|spinner|loader|progress|preloader|skeleton|shimmer|placeholder)/,
+            // Loading icons
+            /<[^>]+\b(icon|Icon)="[^"]*\b(loading|spinner|refresh|sync|clock|hourglass)/,
+            // Conditional loading
+            /\{.*\bisLoading\b.*\?.*(<[^>]*loading|<Loading|<Spinner|loading)/,
+            // Loading text
+            /(Loading\.\.\.|Please wait|Fetching|Processing|Submitting)/
+        ];
+        
+        if (patterns_to_check.some(pattern => pattern.test(line))) {
             patterns.push({
                 type: 'good-loading',
                 line: lineNumber,
@@ -84,28 +234,14 @@ class LoadingDetector {
         }
     }
     
-    /**
-     * Look for loading states in React components (useState, useEffect patterns)
-     * 
-     * @param {string} line - The current line of code
-     * @param {number} lineNumber - Which line we're checking
-     * @param {Array} patterns - Array to add found patterns to
-     */
-    checkForLoadingStates(line, lineNumber, patterns) {
-        // 1. useState for loading states
-        const useStateLoadingPattern = /useState\s*\(\s*false\s*\).*\b(loading|isLoading|fetching|isFetching|submitting|isSubmitting)/;
+    findGoodLoadingStates(line, lineNumber, patterns) {
+        const patterns_to_check = [
+            /useState\s*\(\s*false\s*\).*\b(loading|isLoading|fetching|isFetching|submitting|isSubmitting)/,
+            /const\s+\[(.*loading.*|.*Loading.*|.*fetching.*|.*Fetching.*|.*submitting.*|.*Submitting.*)\s*,/,
+            /\b(loading|isLoading|fetching|isFetching|pending|isPending)\s*[:=]/
+        ];
         
-        // 2. Loading state variables
-        const loadingStatePattern = /const\s+\[(.*loading.*|.*Loading.*|.*fetching.*|.*Fetching.*|.*submitting.*|.*Submitting.*)\s*,/;
-        
-        // 3. Loading props
-        const loadingPropsPattern = /\b(loading|isLoading|fetching|isFetching|pending|isPending)\s*[:=]/;
-        
-        const hasLoadingState = useStateLoadingPattern.test(line) || 
-                               loadingStatePattern.test(line) ||
-                               loadingPropsPattern.test(line);
-        
-        if (hasLoadingState) {
+        if (patterns_to_check.some(pattern => pattern.test(line))) {
             patterns.push({
                 type: 'good-loading-state',
                 line: lineNumber,
@@ -116,32 +252,15 @@ class LoadingDetector {
         }
     }
     
-    /**
-     * Look for progress indicators like progress bars and percentage displays
-     * 
-     * @param {string} line - The current line of code
-     * @param {number} lineNumber - Which line we're checking
-     * @param {Array} patterns - Array to add found patterns to
-     */
-    checkForProgressIndicators(line, lineNumber, patterns) {
-        // 1. Progress bar components
-        const progressBarPattern = /<(ProgressBar|Progress|LinearProgress|CircularProgress)\s/;
+    findProgressIndicators(line, lineNumber, patterns) {
+        const patterns_to_check = [
+            /<(ProgressBar|Progress|LinearProgress|CircularProgress)\s/,
+            /\b(progress|percentage)=\{/,
+            /className="[^"]*\b(progress|percentage|bar|meter)/,
+            /<(progress|meter)\s/
+        ];
         
-        // 2. Progress attributes
-        const progressAttributePattern = /\b(progress|percentage|value|max|min)=\{/;
-        
-        // 3. Progress classes
-        const progressClassPattern = /className="[^"]*\b(progress|percentage|bar|meter)/;
-        
-        // 4. Progress elements
-        const progressElementPattern = /<(progress|meter)\s/;
-        
-        const hasProgressIndicator = progressBarPattern.test(line) || 
-                                   progressAttributePattern.test(line) ||
-                                   progressClassPattern.test(line) ||
-                                   progressElementPattern.test(line);
-        
-        if (hasProgressIndicator) {
+        if (patterns_to_check.some(pattern => pattern.test(line))) {
             patterns.push({
                 type: 'excellent-progress',
                 line: lineNumber,
@@ -152,28 +271,14 @@ class LoadingDetector {
         }
     }
     
-    /**
-     * Look for skeleton screens and placeholder content
-     * 
-     * @param {string} line - The current line of code
-     * @param {number} lineNumber - Which line we're checking
-     * @param {Array} patterns - Array to add found patterns to
-     */
-    checkForSkeletonScreens(line, lineNumber, patterns) {
-        // 1. Skeleton components
-        const skeletonPattern = /<(Skeleton|SkeletonLoader|Placeholder|ContentLoader)\s/;
+    findSkeletonScreens(line, lineNumber, patterns) {
+        const patterns_to_check = [
+            /<(Skeleton|SkeletonLoader|Placeholder|ContentLoader)\s/,
+            /className="[^"]*\b(skeleton|shimmer|placeholder|ghost|loading-placeholder)/,
+            /className="[^"]*\b(pulse|animate-pulse|bounce|fade|blink)/
+        ];
         
-        // 2. Skeleton classes
-        const skeletonClassPattern = /className="[^"]*\b(skeleton|shimmer|placeholder|ghost|loading-placeholder)/;
-        
-        // 3. Pulse or animation classes (common for loading)
-        const pulsePattern = /className="[^"]*\b(pulse|animate-pulse|bounce|fade|blink)/;
-        
-        const hasSkeletonScreen = skeletonPattern.test(line) || 
-                                 skeletonClassPattern.test(line) ||
-                                 pulsePattern.test(line);
-        
-        if (hasSkeletonScreen) {
+        if (patterns_to_check.some(pattern => pattern.test(line))) {
             patterns.push({
                 type: 'excellent-skeleton',
                 line: lineNumber,
@@ -184,105 +289,59 @@ class LoadingDetector {
         }
     }
     
-    /**
-     * Check for missing loading feedback in async operations
-     * 
-     * @param {string} line - The current line of code
-     * @param {number} lineNumber - Which line we're checking
-     * @param {Array} patterns - Array to add found patterns to
-     * @param {Array} lines - All lines in the file
-     * @param {number} currentIndex - Current line index
-     */
-    checkForMissingLoadingFeedback(line, lineNumber, patterns, lines, currentIndex) {
-        // Look for async operations without loading feedback
+    findMissingFormFeedback(line, lineNumber, patterns, lines, currentIndex) {
+        if (!/\bonSubmit\s*=|handleSubmit|submitForm/.test(line)) return;
         
-        // 1. Fetch/API calls without loading states
-        const fetchPattern = /\b(fetch\s*\(|axios\.|api\.|getData|fetchData|loadData|submitForm)/;
-        const hasAsyncOperation = fetchPattern.test(line);
+        const contextLines = this.getContextLines(lines, currentIndex, 3);
+        const hasSubmittingState = contextLines.some(contextLine => 
+            /\b(submitting|isSubmitting|disabled|loading)/.test(contextLine)
+        );
         
-        if (hasAsyncOperation) {
-            // Check surrounding lines for loading indicators
-            const contextLines = this.getContextLines(lines, currentIndex, 5);
-            const hasLoadingInContext = contextLines.some(contextLine => 
-                /\b(loading|isLoading|Loading|Spinner|spinner|loader|Loader)/.test(contextLine)
-            );
-            
-            if (!hasLoadingInContext) {
-                patterns.push({
-                    type: 'missing-loading',
-                    line: lineNumber,
-                    content: line.trim(),
-                    message: 'Async operation without loading feedback - Users need to know system status!',
-                    severity: 'warning'
-                });
-            }
+        if (!hasSubmittingState) {
+            patterns.push({
+                type: 'missing-submit-feedback',
+                line: lineNumber,
+                content: line.trim(),
+                message: 'Form submission without loading/disabled state - Add user feedback!',
+                severity: 'warning'
+            });
         }
-        
-        // 2. Form submissions without loading states
-        const formSubmitPattern = /\bonSubmit\s*=|handleSubmit|submitForm/;
-        const hasFormSubmit = formSubmitPattern.test(line);
-        
-        if (hasFormSubmit) {
-            const contextLines = this.getContextLines(lines, currentIndex, 3);
-            const hasSubmittingState = contextLines.some(contextLine => 
-                /\b(submitting|isSubmitting|disabled|loading)/.test(contextLine)
-            );
-            
-            if (!hasSubmittingState) {
-                patterns.push({
-                    type: 'missing-submit-feedback',
-                    line: lineNumber,
-                    content: line.trim(),
-                    message: 'Form submission without loading/disabled state - Add user feedback!',
-                    severity: 'warning'
-                });
-            }
-        }
-        
-        // 3. useEffect with async operations
+    }
+    
+    findMissingEffectFeedback(line, lineNumber, patterns, lines, currentIndex) {
         const useEffectAsyncPattern = /useEffect\s*\(\s*\(\s*\)\s*=>\s*\{.*\b(fetch|axios|api)/;
         const hasUseEffectAsync = useEffectAsyncPattern.test(line) || 
                                  (line.includes('useEffect') && lines[currentIndex + 1] && 
                                   /\b(fetch|axios|api)/.test(lines[currentIndex + 1]));
         
-        if (hasUseEffectAsync) {
-            const contextLines = this.getContextLines(lines, currentIndex, 7);
-            const hasLoadingState = contextLines.some(contextLine => 
-                /useState.*loading|setLoading|isLoading/.test(contextLine)
-            );
-            
-            if (!hasLoadingState) {
-                patterns.push({
-                    type: 'missing-effect-loading',
-                    line: lineNumber,
-                    content: line.trim(),
-                    message: 'useEffect with async operation missing loading state - Consider adding loading feedback!',
-                    severity: 'suggestion'
-                });
-            }
+        if (!hasUseEffectAsync) return;
+        
+        const contextLines = this.getContextLines(lines, currentIndex, 7);
+        const hasLoadingState = contextLines.some(contextLine => 
+            /useState.*loading|setLoading|isLoading/.test(contextLine)
+        );
+        
+        if (!hasLoadingState) {
+            patterns.push({
+                type: 'missing-effect-loading',
+                line: lineNumber,
+                content: line.trim(),
+                message: 'useEffect with async operation missing loading state - Consider adding loading feedback!',
+                severity: 'suggestion'
+            });
         }
     }
     
-    /**
-     * Get context lines around a specific line for analysis
-     * 
-     * @param {Array} lines - All lines in the file
-     * @param {number} currentIndex - Current line index
-     * @param {number} range - Number of lines before and after to include
-     * @returns {Array} - Context lines
-     */
+    // ===============================================
+    // HELPER METHODS
+    // ===============================================
+    
     getContextLines(lines, currentIndex, range) {
         const start = Math.max(0, currentIndex - range);
         const end = Math.min(lines.length, currentIndex + range + 1);
         return lines.slice(start, end);
     }
     
-    /**
-     * Generate a summary report of loading patterns found
-     * 
-     * @param {Array} patterns - All detected patterns
-     * @returns {Object} - Summary report
-     */
     generateSummary(patterns) {
         const summary = {
             totalPatterns: patterns.length,
