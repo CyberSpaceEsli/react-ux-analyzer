@@ -10,7 +10,7 @@ const traverse = require("@babel/traverse").default;
  * - AST-based analysis for comprehensive component scanning
  * - Detects API calls without loading feedback
  * - Finds good loading practices (spinners, progress bars, skeleton screens)
- * - Reports form submissions without loading states
+ * - Returns structured pattern data for FeedbackHandler processing
  */
 class LoadingDetector {
     
@@ -340,22 +340,6 @@ class LoadingDetector {
         const start = Math.max(0, currentIndex - range);
         const end = Math.min(lines.length, currentIndex + range + 1);
         return lines.slice(start, end);
-    }
-    
-    generateSummary(patterns) {
-        const summary = {
-            totalPatterns: patterns.length,
-            goodPractices: patterns.filter(p => p.severity === 'info').length,
-            warnings: patterns.filter(p => p.severity === 'warning').length,
-            suggestions: patterns.filter(p => p.severity === 'suggestion').length,
-            types: {}
-        };
-        
-        patterns.forEach(pattern => {
-            summary.types[pattern.type] = (summary.types[pattern.type] || 0) + 1;
-        });
-        
-        return summary;
     }
 }
 

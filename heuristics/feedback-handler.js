@@ -1,7 +1,11 @@
 /**
  * FeedbackHandler - Centralized feedback management for React UX Analyzer
  * 
- * This class provides consistent output formatting and VS Code integration
+ * This class provides consistent output formatti            'LOADING': {
+                'loader-missing-ast': 'Add a spinner, skeleton, or "Loading…" so users see the system is working.',
+                'missing-submit-feedback': 'Add a spinner, skeleton, or "Loading…" so users see the system is working.',
+                'missing-effect-loading': 'Add a spinner, skeleton, or "Loading…" so users see the system is working.'
+            }and VS Code integration
  * for all UX heuristic detectors. It standardizes how issues are displayed
  * to users and ensures uniform feedback across different analysis types.
  * 
@@ -109,7 +113,9 @@ class FeedbackHandler {
                 'missing-breadcrumb': 'Missing navigation breadcrumbs in component.'
             },
             'LOADING': {
-                'missing-loading': 'Missing loading indicator.'
+                'loader-missing-ast': 'Missing loading indicator.',
+                'missing-submit-feedback': 'Missing loading indicator.',
+                'missing-effect-loading': 'Missing loading indicator.'
             }
         };
         
@@ -129,7 +135,10 @@ class FeedbackHandler {
                 'missing-breadcrumb': 'Add <Breadcrumb> component or <nav aria-label="breadcrumb"> element near the top of this component.'
             },
             'LOADING': {
-                'missing-loading': 'Add a spinner, skeleton, or “Loading…” so users see the system is working.'
+                'missing-loading': 'Add a spinner, skeleton, progress bar or “Loading…” messages.',
+                'loader-missing-ast': 'Add a spinner, skeleton, progress bar or “Loading…” messages.',
+                'missing-submit-feedback': 'Add a spinner, skeleton, progress bar or “Loading…” messages.',
+                'missing-effect-loading': 'Add a spinner, skeleton, progress bar or “Loading…” messages.'
             }
         };
         

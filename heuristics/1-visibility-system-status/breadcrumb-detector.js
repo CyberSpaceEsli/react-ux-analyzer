@@ -7,7 +7,7 @@
  * What it does:
  * - Scans through each line of JSX code
  * - Looks for breadcrumb components and patterns
- * - Reports missing breadcrumbs as warnings
+ * - Returns structured pattern data for FeedbackHandler processing
  */
 class BreadcrumbDetector {
     
@@ -231,26 +231,6 @@ class BreadcrumbDetector {
         }
         
         return false; // No breadcrumb components found nearby
-    }
-    
-    /**
-     * Create a simple report summarizing what was found
-     * 
-     * @param {Array} patterns - All patterns found during analysis
-     * @returns {Object} - Summary report with counts and details
-     */
-    generateReport(patterns) {
-        // Count different types of findings
-        const goodBreadcrumbs = patterns.filter(p => p.type === 'good-breadcrumb' || p.type === 'good-navigation').length;
-        const missingBreadcrumbs = patterns.filter(p => p.type === 'missing-breadcrumb').length;
-        
-        // Return a simple summary
-        return {
-            totalFindings: patterns.length,
-            goodBreadcrumbs: goodBreadcrumbs,
-            missingBreadcrumbs: missingBreadcrumbs,
-            allPatterns: patterns
-        };
     }
 }
 
