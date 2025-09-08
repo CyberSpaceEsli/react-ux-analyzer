@@ -1,11 +1,7 @@
 /**
  * FeedbackHandler - Centralized feedback management for React UX Analyzer
  * 
- * This class provides consistent output formatti            'LOADING': {
-                'loader-missing-ast': 'Add a spinner, skeleton, or "Loading…" so users see the system is working.',
-                'missing-submit-feedback': 'Add a spinner, skeleton, or "Loading…" so users see the system is working.',
-                'missing-effect-loading': 'Add a spinner, skeleton, or "Loading…" so users see the system is working.'
-            }and VS Code integration
+ * This class handles displaying analysis results in the VS Code Problems panel
  * for all UX heuristic detectors. It standardizes how issues are displayed
  * to users and ensures uniform feedback across different analysis types.
  * 
