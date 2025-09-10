@@ -60,26 +60,6 @@ function BadContactForm() {
   );
 }
 
-// ❌ BAD EXAMPLE: Search without loading indication
-function BadSearchResults({ query }) {
-  const [results, setResults] = useState([]);
-
-  useEffect(() => {
-    if (query) {
-      // Bad: Search without loading feedback
-      searchAPI(query).then(setResults);
-    }
-  }, [query]);
-
-  return (
-    <div>
-      {results.map(result => (
-        <div key={result.id}>{result.title}</div>
-      ))}
-    </div>
-  );
-}
-
 // ❌ BAD EXAMPLE: File upload without progress
 function BadFileUploader() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -153,7 +133,6 @@ function BadLoginForm() {
 export { 
   BadUserDashboard, 
   BadContactForm, 
-  BadSearchResults, 
   BadFileUploader, 
   BadLoginForm 
 };

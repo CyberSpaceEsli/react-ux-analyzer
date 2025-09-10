@@ -119,18 +119,6 @@ function PostList() {
   );
 }
 
-// ❌ BAD EXAMPLE: No loading feedback
-function BadUserProfile({ userId }) {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    // Bad: No loading state - user doesn't know it's loading
-    fetchUser(userId).then(setUser);
-  }, [userId]);
-
-  return <div>{user?.name}</div>;
-}
-
 // ❌ BAD EXAMPLE: Form without loading state
 function BadContactForm() {
   const handleSubmit = (e) => {
@@ -153,6 +141,5 @@ export {
   ContactForm, 
   FileUpload, 
   PostList, 
-  BadUserProfile, 
   BadContactForm 
 };
