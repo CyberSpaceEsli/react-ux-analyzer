@@ -1,11 +1,19 @@
-// Debug test script for breadcrumb and loading detectors
+// Debug test script for breadcrumb, loading and modal detectors
 const fs = require('fs');
 const BreadcrumbDetector = require('./heuristics/1-visibility-system-status/breadcrumb-detector');
 const LoadingDetector = require('./heuristics/1-visibility-system-status/loading-detector');
+const ModalExitDetector = require('./heuristics/3-user-control-freedom/modal-exit-detector');
+const FeedbackHandler = require('./heuristics/feedback-handler');
 
 function runDebugTests() {
-    console.log('🔍 RUNNING BREADCRUMB & LOADING DEBUG TESTS');
-    console.log('============================================\n');
+    console.log('🔍 RUNNING BREADCRUMB, LOADING, MODAL & FEEDBACK TESTS');
+    console.log('=====================================================\n');
+    
+    // FEEDBACK HANDLER TESTS
+    console.log('📋 FEEDBACK HANDLER ANALYSIS');
+    console.log('=============================\n');
+    
+    const feedbackHandler = new FeedbackHandler();
     
     // BREADCRUMB TESTS
     console.log('🔗 BREADCRUMB ANALYSIS');
@@ -85,6 +93,41 @@ function runDebugTests() {
             console.log(`   Content: ${result.content}`);
             console.log(`   Message: ${result.message}\n`);
         });
+
+    } catch (error) {
+        console.error('❌ Loading test failed:', error.message);
+    }
+
+    // MODAL TESTS
+    console.log('\n🔴 MODAL ANALYSIS');
+    console.log('=================\n');
+    
+    const modalDetector = new ModalExitDetector();
+    
+    try {
+        // Test 1: Bad modals
+        console.log('1️⃣  Testing BAD modals:');
+        console.log('📄 File: bad-modals.jsx');
+        
+        const badModalFile = fs.readFileSync('./test/test-modals/bad-modals.jsx', 'utf8');
+        const badModalResults = modalDetector.detectModalExits(badModalFile);
+        
+        console.log(`❌ Found ${badModalResults.length} modal exit issues:\n`);
+        badModalResults.forEach((result, index) => {
+            console.log(`${index + 1}. Line ${result.line}: ${result.type}`);
+            console.log(`   Context: ${result.context || result.issue || result.message}`);
+            console.log(`   Pattern: ${result.pattern}\n`);
+        });
+
+        // Test FeedbackHandler integration
+        console.log('2️⃣  Testing FeedbackHandler integration with modals:');
+        feedbackHandler.showResults({
+            analysisType: 'MODAL',
+            fileName: './test/test-modals/bad-modals.jsx',
+            issues: badModalResults,
+            issueLabel: 'MODAL EXIT ISSUES'
+        });
+        console.log('✅ FeedbackHandler integration successful\n');
         
     } catch (error) {
         console.error('❌ Debug test failed:', error.message);

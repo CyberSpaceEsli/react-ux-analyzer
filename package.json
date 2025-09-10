@@ -29,6 +29,11 @@
         "command": "react-ux-analyzer.analyzeLoading",
         "title": "Analyze Loading States (Nielsen #1: Visibility & System Status)",
         "category": "React UX Analyzer"
+      },
+      {
+        "command": "react-ux-analyzer.analyzeControlExits",
+        "title": "Analyze Control Exits (Nielsen #3: User Control & Freedom)",
+        "category": "React UX Analyzer"
       }
     ],
     "menus": {

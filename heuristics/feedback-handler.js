@@ -1,7 +1,7 @@
 /**
  * FeedbackHandler - Centralized feedback management for React UX Analyzer
  * 
- * This class handles displaying analysis results in the VS Code Problems panel
+ * This class handles displaying analysis results in VS Code Problems panel
  * for all UX heuristic detectors. It standardizes how issues are displayed
  * to users and ensures uniform feedback across different analysis types.
  * 
@@ -28,10 +28,10 @@ class FeedbackHandler {
     /**
      * Show analysis results in VS Code Problems panel and output channel
      * @param {Object} options - Analysis configuration
-     * @param {string} options.analysisType - Type of analysis (e.g., 'BREADCRUMB', 'LOADING')
+     * @param {string} options.analysisType - Type of analysis (e.g., 'BREADCRUMB', 'LOADING', 'CONTROL EXIT')
      * @param {string} options.fileName - Full path to analyzed file
      * @param {Array} options.issues - Array of detected issues
-     * @param {string} options.issueLabel - Label for issues section (e.g., 'MISSING BREADCRUMBS', 'LOADING ISSUES')
+     * @param {string} options.issueLabel - Label for issues section (e.g., 'MISSING BREADCRUMBS', 'LOADING ISSUES', 'CONTROL EXIT ISSUES')
      */
     showResults(options) {
         const { analysisType, fileName, issues } = options;
@@ -50,7 +50,7 @@ class FeedbackHandler {
     }
 
     /**
-     * Display issues in VS Code Problems panel with actionable feedback
+     * Display issues in VS Code Problems panel
      * @param {string} fileName - Full path to the file
      * @param {Array} issues - Array of issue objects
      * @param {string} analysisType - Type of analysis for context
@@ -104,14 +104,25 @@ class FeedbackHandler {
      * @returns {string} Clear problem description
      */
     _describeProblem(issue, analysisType) {
+         // Unified messages for LOADING and MODAL regardless of specific issue type
+        if (analysisType === 'LOADING') {
+            return 'Missing loading indicator.';
+        }
+
+        if (analysisType === 'CONTROL') {
+            return 'Missing control elements (e.g., close, back, undo buttons) in component.';
+        }
+        
+        // Specific messages for other analysis types
         const problemTemplates = {
             'BREADCRUMB': {
-                'missing-breadcrumb': 'Missing navigation breadcrumbs in component.'
+                'missing-breadcrumb': 'Missing navigation breadcrumbs in component.',
             },
             'LOADING': {
-                'loader-missing-ast': 'Missing loading indicator.',
-                'missing-submit-feedback': 'Missing loading indicator.',
-                'missing-effect-loading': 'Missing loading indicator.'
+                'missing-loading': 'Missing loading indicator in component.'
+            },
+            'CONTROL': {
+                'missing-control': 'Missing control and freedom elements in component.'
             }
         };
         
@@ -126,15 +137,25 @@ class FeedbackHandler {
      * @returns {string} Step-by-step fix instructions
      */
     _provideActionableSolution(issue, analysisType) {
+        // Unified solutions for LOADING and MODAL regardless of specific issue type
+        if (analysisType === 'LOADING') {
+            return 'Add a spinner, skeleton, progress bar or "Loading…" messages.';
+        }
+        
+        if (analysisType === 'CONTROL') {
+            return 'Add visible "Close/Back/Undo" Buttons, "OnClose" Props, or \'X\' Icons for user control.';
+        }
+        
+        // Specific solutions for other analysis types
         const solutionTemplates = {
             'BREADCRUMB': {
                 'missing-breadcrumb': 'Add <Breadcrumb> component or <nav aria-label="breadcrumb"> element near the top of this component.'
             },
             'LOADING': {
-                'missing-loading': 'Add a spinner, skeleton, progress bar or “Loading…” messages.',
-                'loader-missing-ast': 'Add a spinner, skeleton, progress bar or “Loading…” messages.',
-                'missing-submit-feedback': 'Add a spinner, skeleton, progress bar or “Loading…” messages.',
-                'missing-effect-loading': 'Add a spinner, skeleton, progress bar or “Loading…” messages.'
+                'missing-loading': 'Add a spinner, skeleton, progress bar or "Loading…" messages.'
+            },
+            'CONTROL': {
+                'missing-control': 'Add visible "Close" Buttons, OnClose Props, \'X\' Icons, Back or Undo Buttons for user control.'
             }
         };
         
@@ -151,7 +172,8 @@ class FeedbackHandler {
     _explainWhy(issue, analysisType) {
         const whyTemplates = {
             'BREADCRUMB': 'Users need to know their location in the app hierarchy.',
-            'LOADING': 'Users need visual feedback that the system is working.'
+            'LOADING': 'Users need visual feedback that the system is working.',
+            'CONTROL': 'Users need to be allowed exit a flow or undo their last action.'
         };
         
         return whyTemplates[analysisType] || 'This improves user experience.';
@@ -166,6 +188,7 @@ class FeedbackHandler {
         const heuristics = {
             'BREADCRUMB': 'Nielsen #1: Visibility of System Status',
             'LOADING': 'Nielsen #1: Visibility of System Status',
+            'CONTROL': 'Nielsen #3: User Control and Freedom',
             'NAVIGATION': 'Nielsen #2: Match Between System and Real World',
             'ERROR': 'Nielsen #9: Help Users Recognize and Recover from Errors'
         };
@@ -187,6 +210,9 @@ class FeedbackHandler {
             
             // Nielsen Heuristic #2: Match Between System and Real World (RUX2xx)
             'NAVIGATION': 'RUX201',  // Heuristic 2, Detector 1
+
+            // Nielsen Heuristic #3: User Control and Freedom (RUX3xx)
+            'CONTROL': 'RUX301',       // Heuristic 3, Detector 1
             
             // Nielsen Heuristic #9: Help Users Recognize and Recover from Errors (RUX9xx)
             'ERROR': 'RUX901',       // Heuristic 9, Detector 1
@@ -204,6 +230,7 @@ class FeedbackHandler {
         const docLinks = {
             'BREADCRUMB': 'https://www.nngroup.com/articles/breadcrumbs/',
             'LOADING': 'https://medium.com/design-bootcamp/using-loaders-understanding-their-purpose-types-and-best-practices-a62ca991d472',
+            'CONTROL': 'https://www.nngroup.com/articles/user-control-and-freedom/',
             'NAVIGATION': 'https://www.nngroup.com/articles/navigation-cognitive-load/',
             'ERROR': 'https://www.nngroup.com/articles/error-message-guidelines/'
         };
@@ -227,7 +254,7 @@ class FeedbackHandler {
         return severityMap[severity] || vscode.DiagnosticSeverity.Warning;
     }
 
-    /**
+     /**
      * Show detailed analysis results in output channel (legacy support)
      * @param {Object} options - Analysis configuration
      */
@@ -267,6 +294,7 @@ class FeedbackHandler {
             this.outputChannel.appendLine(`   Message: ${issue.message}`);
             this.outputChannel.appendLine('');
         });
+    
     }
 
     /**
@@ -308,6 +336,7 @@ class FeedbackHandler {
         const labels = {
             'BREADCRUMB': 'Missing breadcrumbs',
             'LOADING': 'Loading issues',
+            'CONTROL': 'Control exit issues',
             'NAVIGATION': 'Navigation issues',
             'ERROR': 'Error handling issues'
         };
@@ -333,27 +362,9 @@ class FeedbackHandler {
         }
     }
 
-    /**
-     * Filter issues by severity for consistent reporting
-     * @param {Array} patterns - All detected patterns
-     * @param {Array} severities - Severities to include (default: ['warning', 'suggestion'])
-     * @returns {Array} Filtered issues
-     */
-    static filterIssues(patterns, severities = ['warning', 'suggestion']) {
-        return patterns.filter(pattern => severities.includes(pattern.severity));
-    }
 
-    /**
-     * Dispose of resources when extension deactivates
-     */
-    dispose() {
-        if (this.outputChannel) {
-            this.outputChannel.dispose();
-        }
-        if (this.diagnosticsCollection) {
-            this.diagnosticsCollection.dispose();
-        }
-    }
+       
+
 }
 
 module.exports = FeedbackHandler;
