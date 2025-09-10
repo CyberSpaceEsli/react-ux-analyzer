@@ -26,6 +26,9 @@ class ControlExitDetector {
     this.hasDelete = false;
     this.hasUndo = false;
 
+    // Für Multi-Step-Flow: speichere alle Next-Button-Zeilen
+    const nextButtonLines = [];
+
     // Parse JSX file into AST
     const ast = parse(content, {
       sourceType: "module",
@@ -80,7 +83,10 @@ class ControlExitDetector {
             .trim()
             .toLowerCase();
 
-          if (buttonText.includes("next") || buttonText.includes("finish")) this.hasNextButton = true;
+          if (buttonText.includes("next") || buttonText.includes("finish")) {
+            this.hasNextButton = true;
+            nextButtonLines.push(path.node.loc.start.line);
+          }
           if (buttonText.includes("back") || buttonText.includes("previous")) this.hasBackButton = true;
 
           if (buttonText.includes("delete") || buttonText.includes("remove")) {
@@ -99,20 +105,22 @@ class ControlExitDetector {
       // --- Step flow checks ---
       JSXText: (path) => {
         if (/step\s*\d*/i.test(path.node.value)) {
-        this.hasSteps = true;
-      }
-     },
+          this.hasSteps = true;
+        }
+      },
     });
 
-    // --- After traversal: check state flags ---
+    // Multi-Step-Flow: Für jeden Next-Button ein Issue, wenn Step erkannt und kein Back vorhanden
     if (this.hasSteps && this.hasNextButton && !this.hasBackButton) {
-      patterns.push({
-        type: "missing-control",
-        line: this._findLineNumber(content, "delete") || this._findLineNumber(content, "remove"),
-        message:
-          "Multi-step flow detected with Next but no Back button. Provide a way to reverse steps.",
-        severity: "warning",
-      });
+      for (const line of nextButtonLines) {
+        patterns.push({
+          type: "missing-control",
+          line,
+          message:
+            "Multi-step flow detected with Next but no Back button. Provide a way to reverse steps.",
+          severity: "warning",
+        });
+      }
     }
 
     if (this.hasDelete && !this.hasUndo) {
@@ -125,36 +133,7 @@ class ControlExitDetector {
       });
     }
 
-    // --- Regex fallback checks (for Back and Undo) ---
-    const lines = content.split("\n");
-    let hasBackText = false;
-    let hasUndoText = false;
-    lines.forEach((line) => {
-      if (/Back|Previous|←|arrow-left/i.test(line)) hasBackText = true;
-      if (/Undo|Revert/i.test(line)) hasUndoText = true;
-    });
-
-    if (!hasBackText && !this.hasBackButton) {
-      patterns.push({
-        type: "missing-control",
-        line: this._findLineNumber(content, "back"),
-        content: "No back navigation found",
-        message:
-          "No Back button detected. Provide a way for users to reverse navigation steps.",
-        severity: "warning",
-      });
-    }
-
-    if (!hasUndoText && !this.hasUndo) {
-      patterns.push({
-        type: "missing-control",
-        line: this._findLineNumber(content, "undo"),
-        content: "No undo mechanism found",
-        message:
-          "No Undo action detected. Allow users to revert mistakes when possible.",
-        severity: "warning",
-      });
-    }
+    // Kein Regex-Check für Back/Previous/Undo mehr
 
     return patterns;
   }
