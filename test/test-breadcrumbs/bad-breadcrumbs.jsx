@@ -42,16 +42,6 @@ const BadBreadcrumbsPage = () => {
   );
 };
 
-// Another component with poor navigation
-const AnotherBadPage = () => {
-  return (
-    <Container className="deep-page">
-      <h1>Deep nested page</h1>
-      <p>This could be 5 levels deep but user has no idea where they are.</p>
-    </Container>
-  );
-};
-
 // Mock components
 const Page = ({ children, className = "" }) => <div className={className}>{children}</div>;
 const Section = ({ children, className = "" }) => <section className={className}>{children}</section>;
