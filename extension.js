@@ -1,131 +1,157 @@
 /**
- * React UX Analyzer Extension - SIMPLE VERSION
+ * React UX Analyzer Extension
+ * - Separate commands per detector
+ * - Project-wide usability scan for JSX files in `src`
  */
 const vscode = require('vscode');
-const { BreadcrumbDetector, LoadingDetector, ControlExitDetector , FeedbackHandler } = require('./heuristics');
+const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, FeedbackHandler } = require('./heuristics');
+
+async function usabilityAnalyzeReactFiles() {
+  const feedbackHandler = new FeedbackHandler();
+
+  // Only scan src folder for JS/TS/JSX/TSX files
+  const files = await vscode.workspace.findFiles('src/**/*.{jsx}');
+
+  if (files.length === 0) {
+    vscode.window.showInformationMessage('No React source files found in the src folder.');
+    return;
+  }
+
+  for (const file of files) {
+    const document = await vscode.workspace.openTextDocument(file);
+    const content = document.getText();
+    const fileName = document.fileName;
+
+    try {
+      // --- Breadcrumb detector ---
+      const issues = detectBreadcrumbs(content);
+
+      if (issues.length > 0) {
+        feedbackHandler.showResults(fileName, issues.map(issue => ({
+          ...issue,
+          analysisType: 'BREADCRUMB'
+        })));
+      }
+
+    // --- Loading detector ---
+    const loadingIssues = detectLoadingPatterns(content);
+    if (loadingIssues.length > 0) {
+      feedbackHandler.showResults(
+        fileName,
+        loadingIssues.map(issue => ({ ...issue, analysisType: 'LOADING' }))
+      );
+    }
+    
+    // --- Control Exit detector ---
+    const controlExitIssues = detectControlExits(content);
+    if (controlExitIssues.length > 0) {
+      feedbackHandler.showResults(
+        fileName,
+        controlExitIssues.map(issue => ({ ...issue, analysisType: 'CONTROL' }))
+      );
+    }
+
+    // Add more Detectors here...
+
+    } catch (err) {
+      console.error(`Error running Breadcrumb detector on ${fileName}:`, err);
+    }
+  }
+
+  vscode.window.showInformationMessage(`✅ React UX Analyzer finished scanning ${files.length} file(s) in src.`);
+}
 
 function activate(context) {
-    console.log('🚀 React UX Analyzer extension is active!');
-    vscode.window.showInformationMessage('✅ React UX Analyzer loaded!');
+  console.log('🚀 React UX Analyzer extension is active!');
+  vscode.window.showInformationMessage('✅ React UX Analyzer loaded!');
 
-    const breadcrumbDetector = new BreadcrumbDetector();
-    const loadingDetector = new LoadingDetector();
-    const controlExitDetector = new ControlExitDetector();
-    const feedbackHandler = new FeedbackHandler();
+  const feedbackHandler = new FeedbackHandler();
 
-    // Hello World command
-    const helloCommand = vscode.commands.registerCommand('react-ux-analyzer.helloWorld', () => {
-        vscode.window.showInformationMessage('🎉 Hello from React UX Analyzer!');
-    });
+  // Command: Analyze Breadcrumb in current file
+  const analyzeBreadcrumbCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeBreadcrumbs', () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
 
-    // Analyze Breadcrumbs command
-    const analyzeCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeBreadcrumbs', () => {
-        try {
-            console.log('🔍 Starting analysis...');
-            
-            const editor = vscode.window.activeTextEditor;
-            if (!editor) {
-                vscode.window.showErrorMessage('❌ Please open a file first!');
-                return;
-            }
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
 
-            const document = editor.document;
-            const content = document.getText();
-            const fileName = document.fileName;
-            
-            console.log('📄 Analyzing:', fileName);
-            
-            const patterns = breadcrumbDetector.detectBreadcrumbs(content);
-            
-            // Filter only missing breadcrumbs for clear output
-            const missingBreadcrumbs = patterns.filter(p => p.type === 'missing-breadcrumb');
-            
-            console.log('✅ Found:', patterns.length, 'patterns');
-            console.log('❌ Missing breadcrumbs:', missingBreadcrumbs.length);
-            
-            feedbackHandler.showResults({
-                analysisType: 'BREADCRUMB',
-                fileName: fileName,
-                issues: missingBreadcrumbs,
-                issueLabel: 'MISSING BREADCRUMBS'
-            });
-            
-        } catch (error) {
-            console.error('❌ Error:', error);
-            vscode.window.showErrorMessage('Analysis failed: ' + error.message);
-        }
-    });
+    try {
+      const issues = detectBreadcrumbs(content);
 
-    // Analyze Loading command
-    const analyzeLoadingCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeLoading', () => {
-        try {
-            console.log('⏳ Starting loading analysis...');
-            
-            const editor = vscode.window.activeTextEditor;
-            if (!editor) {
-                vscode.window.showErrorMessage('❌ Please open a file first!');
-                return;
-            }
+      feedbackHandler.showResults(fileName, issues.map(issue => ({
+        ...issue,
+        analysisType: 'BREADCRUMB'
+      })));
+    } catch (err) {
+      console.error(`Error running Breadcrumb detector on ${fileName}:`, err);
+      vscode.window.showErrorMessage(`Breadcrumb analysis failed: ${err.message}`);
+    }
+  });
 
-            const document = editor.document;
-            const content = document.getText();
-            const fileName = document.fileName;
-            
-            console.log('📄 Analyzing loading patterns:', fileName);
-            
-            const patterns = loadingDetector.detectLoadingPatterns(content);
-            
-            // Show all loading issues as warnings
-            console.log('✅ Found:', patterns.length, 'patterns');
-            feedbackHandler.showResults({
-                analysisType: 'LOADING',
-                fileName: fileName,
-                issues: patterns,
-                issueLabel: 'LOADING ISSUES'
-            });
-            
-        } catch (error) {
-            console.error('❌ Error:', error);
-            vscode.window.showErrorMessage('Loading analysis failed: ' + error.message);
-        }
-    });
+  // Command: Analyze Loading Patterns in current file 
+  const analyzeLoadingCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeLoading', () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
 
-    // Analyze User Control Exit command
-    const analyzeControlExitCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeControlExits', () => {
-        try {
-            console.log('🛑 Starting Exit analysis...');
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
 
-            const editor = vscode.window.activeTextEditor;
-            if (!editor) {
-                vscode.window.showErrorMessage('❌ Please open a file first!');
-                return;
-            }
-            const document = editor.document;
-            const content = document.getText();
-            const fileName = document.fileName;
-            console.log('📄 Analyzing control exit patterns:', fileName);
-            const patterns = controlExitDetector.detectControlExits(content);
-            // Show all control exit issues as warnings
-            console.log('✅ Found:', patterns.length, 'patterns');
-            feedbackHandler.showResults({
-                analysisType: 'CONTROL',
-                fileName: fileName,
-                issues: patterns,
-                issueLabel: 'CONTROL EXIT ISSUES'
-            });
-        } catch (error) {
-            console.error('❌ Error:', error);
-            vscode.window.showErrorMessage('Control exit analysis failed: ' + error.message);
-        }
-    });
+    try {
+      const issues = detectLoadingPatterns(content);
 
-    context.subscriptions.push(helloCommand);
-    context.subscriptions.push(analyzeCommand);
-    context.subscriptions.push(analyzeLoadingCommand);
-    context.subscriptions.push(analyzeControlExitCommand);
-    context.subscriptions.push(feedbackHandler); // Add feedbackHandler for proper cleanup
-    
-    console.log('✅ Commands registered!');
+      feedbackHandler.showResults(fileName, issues.map(issue => ({
+        ...issue,
+        analysisType: 'LOADING'
+      })));
+    } catch (err) {
+      console.error(`Error running Loading detector on ${fileName}:`, err);
+      vscode.window.showErrorMessage(`Loading analysis failed: ${err.message}`);
+    }
+  });
+
+  // Command: Analyze Control Exit (class-based detector)
+  const analyzeControlExitCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeControlExits', () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
+
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
+
+    try {
+      const issues = detectControlExits(content);
+
+      feedbackHandler.showResults(fileName, issues.map(issue => ({
+        ...issue,
+        analysisType: 'CONTROL'
+      })));
+    } catch (err) {
+      console.error(`Error running Control Exit detector on ${fileName}:`, err);
+      vscode.window.showErrorMessage(`Control Exit analysis failed: ${err.message}`);
+    }
+  });
+
+  // Project-wide command: Analyze all React files in src folder
+  const analyzeProjectCommand = vscode.commands.registerCommand('react-ux-analyzer.usabilityAnalyzeReactFiles', usabilityAnalyzeReactFiles);
+
+  // Register all commands
+  context.subscriptions.push(analyzeBreadcrumbCommand);
+  context.subscriptions.push(analyzeLoadingCommand);
+  context.subscriptions.push(analyzeControlExitCommand);
+  context.subscriptions.push(analyzeProjectCommand);
+
+  console.log('✅ React UX Analyzer commands registered!');
 }
 
 function deactivate() {}

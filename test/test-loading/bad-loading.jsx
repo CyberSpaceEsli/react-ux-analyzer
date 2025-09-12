@@ -130,9 +130,52 @@ function BadLoginForm() {
   );
 }
 
+// ❌ BAD EXAMPLE: Missing animation for loading state
+function BadMissingAnimate() {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    await fetch("/api/submit", { method: "POST" });
+    setSubmitting(false);
+  };
+
+  return (
+    <button
+      type="submit"
+      onClick={handleSubmit}
+    >
+      {/* ❌ BAD: Using <div> as spinner, current detector only checks <svg> */}
+      <div className="mr-2 w-5 h-5 bg-gray-500"></div>
+    </button>
+  );
+}
+
+
+function BadLoadingSpinner() {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleClick = () => {
+    setSubmitting(true);
+    // simulate async work
+    setTimeout(() => setSubmitting(false), 2000);
+  };
+
+  return (
+    <button type="submit" onClick={handleClick}>
+      {/* ❌ BAD: div intended as spinner but missing animate-spin */}
+      <svg className="mr-2 w-5 h-5 bg-gray-500"></svg>
+    </button>
+  );
+}
+
+export default BadLoadingSpinner;
+
+
 export { 
   BadUserDashboard, 
   BadContactForm, 
   BadFileUploader, 
-  BadLoginForm 
+  BadLoginForm ,
+  BadMissingAnimate
 };

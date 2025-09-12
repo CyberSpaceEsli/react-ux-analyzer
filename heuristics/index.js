@@ -5,14 +5,15 @@
  * Currently implements Nielsen's Heuristic #1: Visibility of System Status
  */
 
-const BreadcrumbDetector = require('./1-visibility-system-status/breadcrumb-detector');
-const LoadingDetector = require('./1-visibility-system-status/loading-detector');
+const { detectBreadcrumbs } = require('./1-visibility-system-status/breadcrumb-detector');
+const { detectLoadingPatterns } = require('./1-visibility-system-status/loading-detector');
+const { detectControlExits } = require('./3-user-control-freedom/control-exit-detector');
 const FeedbackHandler = require('./feedback-handler');
-const ControlExitDetector = require('./3-user-control-freedom/control-exit-detector');
 
 module.exports = {
-    BreadcrumbDetector,
-    LoadingDetector,
-    ControlExitDetector,
-    FeedbackHandler
+  // Function-based detector
+  detectBreadcrumbs,
+  detectLoadingPatterns,
+  detectControlExits,
+  FeedbackHandler
 };

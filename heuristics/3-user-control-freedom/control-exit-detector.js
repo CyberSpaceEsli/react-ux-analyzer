@@ -1,191 +1,120 @@
-/**
- * Control Exit Detector for React UX Analysis
- * 
- * Detects modal/dialog components that lack proper exit mechanisms (Nielsen Heuristic #3: User Control and Freedom)
- * 
- * Features:
- * - Regex-based detection of Modal/Dialog components
- * - Tracks multi-step flows (Step/Next without Back)
- * - Tracks destructive actions (Delete/Remove without Undo)
- * - Button/text detection for Back & Undo
- * - Regex-based fallback checks for Back and Undo
- */
-
 const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 
-class ControlExitDetector {
+/**
+ * detectControlExits - Detects missing exit mechanisms in React components
+ * Nielsen Heuristic #3: User Control and Freedom
+ */
+function detectControlExits(content) {
+  const feedback = [];
+  const nextButtonLines = [];
 
-  detectControlExits(content) {
-    const patterns = [];
+  let hasNextButton = false;
+  let hasBackButton = false;
 
-    // Reset state flags for this file
-    this.hasSteps = false;
-    this.hasNextButton = false;
-    this.hasBackButton = false;
-    this.hasDelete = false;
-    this.hasUndo = false;
+  const destructiveButtons = [];
+  const undoButtons = [];
 
-    // Für Multi-Step-Flow: speichere alle Next-Button-Zeilen
-    const nextButtonLines = [];
+  const ast = parse(content, {
+    sourceType: "module",
+    plugins: ["jsx", "typescript"],
+  });
 
-    // Parse JSX file into AST
-    const ast = parse(content, {
-      sourceType: "module",
-      plugins: ["jsx", "typescript"],
-    });
+  traverse(ast, {
+    JSXElement(path) {
+      const node = path.node;
+      const nameNode = node.openingElement.name;
+      const elementName = nameNode?.type === "JSXIdentifier" ? nameNode.name : null;
 
-    traverse(ast, {
-      JSXElement: (path) => {
-        const nameNode = path.node.openingElement.name;
-        const elementName =
-          nameNode && nameNode.type === "JSXIdentifier"
-            ? nameNode.name
-            : null;
-
-        // --- Modal/Dialog checks ---
-        if (["Modal", "Dialog", "SimpleDialog"].includes(elementName)) {
-          const attrs = path.node.openingElement.attributes;
-
-          // 1. Missing onClose prop
-          const hasOnClose = attrs.some(
-            (a) => a.type === "JSXAttribute" && a.name.name === "onClose"
-          );
-
-          if (!hasOnClose) {
-            patterns.push({
-              type: "missing-control",
-              line: path.node.loc.start.line,
-              message:
-                "Modal/Dialog detected without onClose handler. Users may be trapped.",
-              severity: "warning",
-            });
-          }
-
-          // 2. Missing visible close button
-          const hasCloseButton = this.containsCloseButton(path.node);
-          if (!hasCloseButton) {
-            patterns.push({
-              type: "missing-control",
-              line: path.node.loc.start.line,
-              message:
-                "Modal/Dialog has no visible close button. Add a clear exit mechanism (X or Close).",
-              severity: "warning",
-            });
-          }
+      // --- Modal/Dialog/Drawer/Popover checks ---
+      if (["Modal", "Dialog", "Drawer", "Popover"].includes(elementName)) {
+        // 1️⃣ Must have onClose prop
+        const hasOnClose = node.openingElement.attributes.some(
+          a => a.type === "JSXAttribute" && a.name.name === "onClose"
+        );
+        if (!hasOnClose) {
+          feedback.push({
+            type: "missing-control",
+            line: node.loc.start.line,
+            message: `${elementName} missing onClose handler. Users may be trapped.`,
+            severity: "warning",
+          });
         }
 
-        // --- Button checks (navigation & destructive actions) ---
-        if (elementName === "button") {
-          const buttonText = (path.node.children || [])
-            .map((c) => (c.type === "JSXText" ? c.value : ""))
-            .join("")
-            .trim()
-            .toLowerCase();
-
-          if (buttonText.includes("next") || buttonText.includes("finish")) {
-            this.hasNextButton = true;
-            nextButtonLines.push(path.node.loc.start.line);
+        // 2️⃣ Check for buttons with "close" or "cancel" text inside
+        const closeButtonExists = node.children.some(child => {
+          if (child.type === "JSXElement" && child.openingElement.name.type === "JSXIdentifier") {
+            if (child.openingElement.name.name === "button") {
+              const text = (child.children || [])
+                .map(c => (c.type === "JSXText" ? c.value : ""))
+                .join("")
+                .trim()
+                .toLowerCase();
+              return /close|exit|x|cancel/i.test(text);
+            }
           }
-          if (buttonText.includes("back") || buttonText.includes("previous")) this.hasBackButton = true;
-
-          if (buttonText.includes("delete") || buttonText.includes("remove")) {
-            this.hasDelete = true;
-          }
-          if (
-            buttonText.includes("undo") ||
-            buttonText.includes("cancel") ||
-            buttonText.includes("restore")
-          ) {
-            this.hasUndo = true;
-          }
-        }
-      },
-
-      // --- Step flow checks ---
-      JSXText: (path) => {
-        if (/step\s*\d*/i.test(path.node.value)) {
-          this.hasSteps = true;
-        }
-      },
-    });
-
-    // Multi-Step-Flow: Für jeden Next-Button ein Issue, wenn Step erkannt und kein Back vorhanden
-    if (this.hasSteps && this.hasNextButton && !this.hasBackButton) {
-      for (const line of nextButtonLines) {
-        patterns.push({
-          type: "missing-control",
-          line,
-          message:
-            "Multi-step flow detected with Next but no Back button. Provide a way to reverse steps.",
-          severity: "warning",
+          return false;
         });
-      }
-    }
 
-    if (this.hasDelete && !this.hasUndo) {
-      patterns.push({
+        if (!closeButtonExists) {
+          // Push feedback at the location of the parent modal/dialog
+          feedback.push({
+            type: "missing-control",
+            line: node.loc.start.line,
+            message: `${elementName} has no visible Close or Cancel button. Add a clear exit mechanism.`,
+            severity: "warning",
+          });
+        }
+      }
+
+      // --- Button checks for multi-step forms and destructive actions ---
+      if (elementName === "button") {
+        const buttonText = (node.children || [])
+          .map(c => (c.type === "JSXText" ? c.value : ""))
+          .join("")
+          .trim()
+          .toLowerCase();
+
+        // Multi-step form navigation
+        if (buttonText.includes("next") || buttonText.includes("finish")) {
+          hasNextButton = true;
+          nextButtonLines.push(node.loc.start.line);
+        }
+        if (buttonText.includes("back") || buttonText.includes("previous")) hasBackButton = true;
+
+        // Destructive actions
+        if (buttonText.includes("delete") || buttonText.includes("remove")) destructiveButtons.push(node);
+        if (buttonText.includes("undo") || buttonText.includes("cancel") || buttonText.includes("restore"))
+          undoButtons.push(node);
+      }
+    },
+  });
+
+  // --- Multi-step forms: Next without Back ---
+  if (hasNextButton && !hasBackButton) {
+    for (const line of nextButtonLines) {
+      feedback.push({
         type: "missing-control",
-        line: this._findLineNumber(content, "delete") || this._findLineNumber(content, "remove"),
-        message:
-          "Destructive action detected without Undo. Allow users to revert mistakes.",
+        line,
+        message: "Multi-step flow has Next/Finish button but no Back/Previous button. Provide a way to reverse steps.",
         severity: "warning",
       });
     }
-
-    // Kein Regex-Check für Back/Previous/Undo mehr
-
-    return patterns;
   }
 
-  // --- Helpers ---
-  // Checks if a close button exists in the modal/dialog's children
-  containsCloseButton(node) {
-    if (!node.children) return false;
-
-    for (const child of node.children) {
-      if (child.type === "JSXElement") {
-        const elName =
-          child.openingElement.name.type === "JSXIdentifier"
-            ? child.openingElement.name.name
-            : "";
-
-        // Typical close UI elements
-        if (
-          elName === "CloseButton" ||
-          (elName === "Icon" &&
-            child.openingElement.attributes.some(
-              (a) =>
-                a.type === "JSXAttribute" &&
-                a.name.name === "name" &&
-                a.value.value === "close"
-            ))
-        ) {
-          return true;
-        }
-
-        // Recursively check nested elements
-        if (this.containsCloseButton(child)) return true;
-      }
-
-      if (child.type === "JSXText" && /close/i.test(child.value)) {
-        return true;
-      }
+  // --- Destructive actions without Undo ---
+  if (destructiveButtons.length > 0 && undoButtons.length === 0) {
+    for (const btn of destructiveButtons) {
+      feedback.push({
+        type: "missing-control",
+        line: btn.loc.start.line,
+        message: "Destructive action detected without Undo/Cancel/Restore. Allow users to revert mistakes.",
+        severity: "warning",
+      });
     }
-    return false;
   }
 
-  // Helper to find the first line number containing a given keyword
-  _findLineNumber(content, keyword) {
-    const lines = content.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].toLowerCase().includes(keyword.toLowerCase())) {
-        return i + 1;
-      }
-    }
-    return null;
-  }
-
+  return feedback;
 }
 
-module.exports = ControlExitDetector;
+module.exports = { detectControlExits };

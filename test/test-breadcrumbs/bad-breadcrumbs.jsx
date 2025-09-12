@@ -11,8 +11,7 @@ const BadBreadcrumbsPage = () => {
           <h1>User Settings</h1>
         </header>
         
-        <main>
-          {/* Bad: No navigation context provided */}
+        <main>. 
           <Section className="profile-section">
             <h2>Profile Information</h2>
             <p>This page lacks breadcrumb navigation.</p>
@@ -38,6 +37,12 @@ const BadBreadcrumbsPage = () => {
         <h1>Product: Laptop XYZ</h1>
         <p>User cannot see the path: Home &gt; Products &gt; Electronics &gt; Laptops &gt; Current Product</p>
       </Main>
+
+
+      {/* ❌ BAD: Missing Breadcrumb */}
+      <main className="max-w-5xl mx-auto py-12 px-6">
+        <p className="text-gray-600 mb-6">You should normally see breadcrumbs here.</p>
+      </main>
     </div>
   );
 };

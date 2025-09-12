@@ -31,11 +31,12 @@ function BadDialogNoState() {
   return (
     <div>
       {/* Missing isOpen/visible prop - can't control when it shows */}
-      <SimpleDialog>
+       {/* @ts-ignore - intentional bad example */}
+      <Dialog isOpen={false}>
         <h3>Uncontrolled Dialog</h3>
+        <button onClick={handleSubmit}>X</button>
         <button onClick={handleSubmit}>Submit</button>
-        <button>Close</button> {/* No close handler */}
-      </SimpleDialog>
+      </Dialog>
     </div>
   );
 }
@@ -52,9 +53,6 @@ function BadModalBrokenClose() {
         <div>
           <h2>Broken Close Button</h2>
           <p>The close button below does nothing</p>
-          
-          {/* Close button without onClick handler */}
-          <button>Close</button>
           
           <div>
             <button onClick={() => alert('Save')}>Save</button>
@@ -195,7 +193,8 @@ function Modal({ isOpen, onClose, children }) {
   return <div>{children}</div>;
 }
 
-function SimpleDialog(children) {
+function Dialog({ isOpen, onClose, children }) {
+  if (!isOpen) return null;
   return <div>{children}</div>;
 }
 

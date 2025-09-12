@@ -1,133 +1,191 @@
-/**
- * Loading State Detector for React UX Analysis
- * 
- * Detects missing loading feedback in React components (Nielsen Heuristic #1: Visibility of System Status)
- * 
- * Features:
- * - Detects API calls without loading feedback
- * - Finds good loading practices (spinners, progress bars, skeleton screens)
- * - Returns structured pattern data for FeedbackHandler processing
- */
-
 const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 
-class LoadingDetector {
-    constructor() {
-    this.loadingComponents = ["Loading", "Spinner", "Skeleton", "Loader"];
-    // Regex only used to detect if loading UI exists, but not reported directly
-    this.loadingRegex = /<(Loading|Spinner|Skeleton|Loader)/i;
-  }
-    
-    detectLoadingPatterns(content) {
-        const patterns = [];
+/**
+ * detectLoadingPatterns - checks React code for missing loading indicators
+ * Heuristic: Nielsen #1 - Visibility of System Status
+ */
+function detectLoadingPatterns(content) {
+  const feedback = [];
 
-        const ast = parse(content, {
-        sourceType: "module",
-        plugins: ["jsx", "typescript"]
-        });
-       
-        traverse(ast, {
-        CallExpression: (path) => {
-        const callee = path.node.callee;
-
-        // Detects any function call that is: fetch or (axios.(get|post|put|delete))
-        if (callee.type === "Identifier" && callee.name === "fetch"){
-          const parentFunc = path.getFunctionParent();
-          const hasLoadingUI = this.checkForLoadingUI(parentFunc);
-
-          //async function without loading UI
-          if (!hasLoadingUI) {
-            patterns.push({
-              type: "loader-missing",
-              line: path.node.loc.start.line,
-              message:
-                "Async operation detected but no loading feedback (spinner, text, or disabled button) found. Add feedback to inform the user.",
-              severity: "warning"
-            });
-          }
-        }
-      },
-
-      // Form submission detection whithout loading feedback
-      JSXElement: (path) => {
-        const openingName = path.node.openingElement.name;
-        // Detect forms
-        if (openingName.type === "JSXIdentifier" && openingName.name === "form") {
-          const hasLoading = this.checkFormLoading(path.node);
-          if (!hasLoading) {
-            patterns.push({
-              type: "loader-missing",
-              line: path.node.loc.start.line,
-              message:
-                "Form detected without loading feedback (spinner, 'loading' text, or disabled button). Add feedback for user.",
-              severity: "warning"
-            });
-          }
-        }
-      }
+  let ast;
+  try {
+    ast = parse(content, {
+      sourceType: "module",
+      plugins: ["jsx", "typescript", "classProperties"],
+      errorRecovery: true
     });
-
-    return patterns;
+  } catch (err) {
+    throw new Error("JS/JSX code could not be parsed: " + err.message);
   }
 
-  isAxiosCall(callee) {
-    return (
-      callee.type === "MemberExpression" &&
-      callee.object.name === "axios" &&
-      ["get", "post", "put", "delete"].includes(callee.property.name)
-    );
-  }
+  const spinnerTags = ["svg", "span", "div"];
 
-  // Checks if loading UI components or text exist in the parent function body of the API call
-  checkForLoadingUI(funcPath) {
-    if (!funcPath) return false;
-    let found = false;
+  /**
+   * Helper: checks if a JSX element or its children have valid loading indicators
+   */
+  function checkLoadingIndicator(node) {
+    if (!node || node.type !== "JSXElement") return false;
 
-    funcPath.traverse({
-      JSXElement: (path) => {
-        const name = path.node.openingElement.name;
-        if (name.type === "JSXIdentifier" && this.loadingComponents.includes(name.name)) {
-          found = true;
-          path.stop();
-        }
+    const name = node.openingElement.name;
 
-        // Also check for literal "Loading..." text
-        path.node.children.forEach((child) => {
-          if (child.type === "JSXText" && /loading/i.test(child.value)) {
-            found = true;
-          }
+    // 1️⃣ Recognize Spinner / CircularProgress
+    if (name.type === "JSXIdentifier" && /spinner|circularprogress/i.test(name.name)) return true;
+
+    // 2️⃣ Tailwind animate-spin check for svg, span, div
+    if (name.type === "JSXIdentifier" && spinnerTags.includes(name.name.toLowerCase())) {
+      const attrs = node.openingElement.attributes || [];
+      const hasAnimateSpin = attrs.some(
+        attr =>
+          attr.type === "JSXAttribute" &&
+          (attr.name.name === "className" || attr.name.name === "class") &&
+          attr.value &&
+          ((attr.value.type === "StringLiteral" && /animate-spin/i.test(attr.value.value)) ||
+            (attr.value.type === "JSXExpressionContainer" && /animate-spin/i.test("{...}")))
+      );
+
+      if (!hasAnimateSpin) {
+        feedback.push({
+          type: "missing-loading-animation",
+          line: node.loc.start.line,
+          content: content.slice(node.start, node.end),
+          severity: "warning",
+          message: `Potential spinner <${node.openingElement.name.name}> is missing 'animate-spin' class.`,
+          action: `Add 'animate-spin' to <${node.openingElement.name.name}> to indicate loading.`,
+          why: "Users need a visual spinner to know the action is in progress."
         });
+        return true;
       }
-    });
+      return true; // valid spinner
+    }
 
-    return found;
-  }
+    // 3️⃣ Check children recursively for text or JSX expressions
+    if (node.children) {
+      for (const child of node.children) {
+        if (child.type === "JSXText" && /loading|submitting|processing/i.test(child.value)) return true;
 
-  // Checks if a form has loading feedback (disabled button or loading text)
-  checkFormLoading(formNode) {
-    const children = formNode.children || [];
-    for (const child of children) {
-      if (child.type === "JSXElement") {
-        const name = child.openingElement.name;
-        if (name.type === "JSXIdentifier" && name.name === "button") {
-          const attrs = child.openingElement.attributes || [];
-          for (const attr of attrs) {
-            if (attr.type === "JSXAttribute" && attr.name.name === "disabled") {
+        if (child.type === "JSXExpressionContainer" && child.expression) {
+          // Conditional expressions {loading ? ... : ...}
+          if (child.expression.type === "ConditionalExpression") {
+            const { consequent, alternate } = child.expression;
+            if (
+              (consequent.type === "JSXElement" || consequent.type === "JSXText") ||
+              (alternate.type === "JSXElement" || alternate.type === "JSXText")
+            )
               return true;
-            }
           }
-        }
-        child.children.forEach((c) => {
-          if (c.type === "JSXText" && /loading/i.test(c.value)) {
+          // Short-circuit {loading && <Spinner />}
+          if (child.expression.type === "LogicalExpression") return true;
+
+          if (child.expression.type === "StringLiteral" && /loading|submitting|processing/i.test(child.expression.value))
             return true;
-          }
-        });
+        }
+
+        if (child.type === "JSXElement" && checkLoadingIndicator(child)) return true;
       }
     }
+
     return false;
   }
 
+  traverse(ast, {
+    // 1️⃣ Detect fetch / axios calls without loading feedback
+    CallExpression(path) {
+    const callee = path.node.callee;
+    const isFetch =
+      (callee.type === "Identifier" && callee.name === "fetch") ||
+      (callee.type === "MemberExpression" && callee.object?.type === "Identifier" && callee.object.name === "axios");
+
+    if (isFetch) {
+      const parentFunc = path.getFunctionParent();
+      if (!parentFunc) return;
+
+      const bodyNode = parentFunc.node.body;
+      let bodyStatements = [];
+
+      if (!bodyNode) return; // safety guard
+
+      // 1️⃣ Block statement (normal function)
+      if (bodyNode.type === "BlockStatement") {
+        bodyStatements = bodyNode.body;
+      } else {
+        // 2️⃣ Expression-bodied arrow function
+        bodyStatements = [bodyNode];
+      }
+
+      const hasLoadingUI = bodyStatements.some(stmt => {
+        // Check for if (loading) {...}
+        return (
+          stmt.type === "IfStatement" &&
+          stmt.test &&
+          stmt.test.type === "Identifier" &&
+          /loading|submitting|uploading|processing/i.test(stmt.test.name)
+        );
+      });
+
+      if (!hasLoadingUI) {
+        feedback.push({
+          type: "missing-loading",
+          line: path.node.loc.start.line,
+          content: content.slice(path.node.start, path.node.end),
+          severity: "warning",
+          message: "fetch/axios call detected without loading UI.",
+          action:
+            "Wrap the network call with a loading state and show <Spinner />, <CircularProgress />, animate-spin element, or loading text.",
+          why: "Users need feedback that the system is working."
+        });
+      }
+    }
+  },
+
+    // 2️⃣ Detect buttons missing disabled={loading}
+    JSXElement(path) {
+    const node = path.node;
+
+    // Only check <button> elements
+    if (node.openingElement.name.type === "JSXIdentifier" && node.openingElement.name.name === "button") {
+      // Check if button has type="submit"
+      const typeAttr = node.openingElement.attributes.find(
+        a => a.type === "JSXAttribute" && a.name.name === "type"
+      );
+      const typeValue =
+        typeAttr && typeAttr.type === "JSXAttribute" && typeAttr.value && typeAttr.value.type === "StringLiteral"
+          ? typeAttr.value.value
+          : undefined;
+
+      if (typeValue === "submit") {
+        // Check if button has disabled attribute
+        const disabledAttr = node.openingElement.attributes.find(
+          a => a.type === "JSXAttribute" && a.name.name === "disabled"
+        );
+
+      const childrenHaveLoading = node.children.map(child => checkLoadingIndicator(child)).some(Boolean);
+
+        let hasDisabledIsLoading = false;
+        if (disabledAttr && disabledAttr.type === "JSXAttribute" && disabledAttr.value) {
+          if (disabledAttr.value.type === "JSXExpressionContainer") {
+            // e.g., disabled={isLoading}
+            hasDisabledIsLoading = true; // consider any expression as valid
+          }
+        }
+
+        if (!disabledAttr || !hasDisabledIsLoading && !childrenHaveLoading) {
+          feedback.push({
+            type: "missing-loading",
+            line: node.loc.start.line,
+            content: content.slice(node.start, node.end),
+            severity: "warning",
+            message: "Submit button with type='submit' is missing `disabled={isLoading}`.",
+            action: "Add `disabled={isLoading}` and show a spinner or loading text inside the button.",
+            why: "Users need feedback that the action is in progress."
+          });
+        }
+      }
+    }
+  }
+  });
+
+  return feedback;
 }
 
-module.exports = LoadingDetector;
+module.exports = { detectLoadingPatterns };

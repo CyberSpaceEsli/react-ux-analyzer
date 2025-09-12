@@ -1,370 +1,138 @@
-/**
- * FeedbackHandler - Centralized feedback management for React UX Analyzer
- * 
- * This class handles displaying analysis results in VS Code Problems panel
- * for all UX heuristic detectors. It standardizes how issues are displayed
- * to users and ensures uniform feedback across different analysis types.
- * 
- * Features:
- * - VS Code Problems panel integration for developer-friendly workflow
- * - Actionable feedback with clear fix instructions
- * - Frontend-friendly language without UX jargon
- * - Consistent messaging structure across all heuristics
- * - Direct links to file locations and documentation
- * - Nielsen heuristic identification for context
- */
-
 const vscode = require('vscode');
 
+/**
+ * FeedbackHandler - centralizes feedback display for React UX Analyzer
+ */
 class FeedbackHandler {
-    constructor() {
-        this.outputChannel = null;
-        this.diagnosticsCollection = null;
-        
-        // Create diagnostics collection for Problems panel
-        this.diagnosticsCollection = vscode.languages.createDiagnosticCollection('react-ux-analyzer');
+  constructor() {
+    this.diagnostics = vscode.languages.createDiagnosticCollection('react-ux-analyzer');
+    this.outputChannel = vscode.window.createOutputChannel('React UX Analyzer');
+  }
+
+  /**
+   * Display detector results in Problems panel and optionally output channel
+   * @param {string} filePath - full path of analyzed file
+   * @param {Array} issues - array of issue objects with {line, type, severity, content, message, analysisType}
+   */
+  showResults(filePath, issues) {
+    this.clear(filePath);
+
+    const diagnostics = issues.map(issue => {
+      const range = new vscode.Range(issue.line - 1, 0, issue.line - 1, 1000);
+      const diagnostic = new vscode.Diagnostic(
+        range,
+        this._formatMessage(issue),
+        this._mapSeverity(issue.severity)
+      );
+
+      diagnostic.source = 'React UX Analyzer';
+      diagnostic.code = {
+        value: this._getHeuristicCode(issue.analysisType),
+        target: this._getDocumentationLink(issue.analysisType)
+      };
+      return diagnostic;
+    });
+
+    this.diagnostics.set(vscode.Uri.file(filePath), diagnostics);
+    this._showNotification(issues);
+    this._showOutputChannel(filePath, issues);
+  }
+
+  /**
+   * Clear previous diagnostics for a file
+   */
+  clear(filePath) {
+    this.diagnostics.delete(vscode.Uri.file(filePath));
+  }
+
+  /**
+   * Map detector severity to VS Code DiagnosticSeverity
+   */
+  _mapSeverity(severity) {
+    const map = {
+      'error': vscode.DiagnosticSeverity.Error,
+      'warning': vscode.DiagnosticSeverity.Warning,
+      'info': vscode.DiagnosticSeverity.Information,
+      'hint': vscode.DiagnosticSeverity.Hint
+    };
+    return map[severity] || vscode.DiagnosticSeverity.Warning;
+  }
+
+  /**
+   * Format a single issue message with problem + solution + why + heuristic
+   */
+  _formatMessage(issue) {
+   const heuristic = this._getHeuristicName(issue.analysisType);
+  const heuristicCode = this._getHeuristicCode(issue.analysisType);
+  const docLink = this._getDocumentationLink(issue.analysisType);
+
+  // Problem description
+  const problem = issue.problem || issue.message || "UX issue detected";
+
+  // Actionable advice
+  const action = issue.action || "Please review and apply UX best practices.";
+
+  // Why it helps users
+  const why = issue.why || "Improves user experience and usability.";
+
+  return `${problem}\nAction: ${action}\nWhy: ${why}\nHeuristic: ${heuristic} (${heuristicCode})\nMore info: ${docLink}`;
+  }
+
+  _getHeuristicName(analysisType) {
+    const heuristics = {
+      'BREADCRUMB': 'Nielsen #1: Visibility of System Status',
+      'LOADING': 'Nielsen #1: Visibility of System Status',
+      'CONTROL': 'Nielsen #3: User Control and Freedom'
+    };
+    return heuristics[analysisType] || 'Nielsen Heuristic';
+  }
+
+  _getHeuristicCode(analysisType) {
+    const codes = {
+      'BREADCRUMB': 'RUX101',
+      'LOADING': 'RUX102',
+      'CONTROL': 'RUX301'
+    };
+    return codes[analysisType] || 'RUX000';
+  }
+
+  _getDocumentationLink(analysisType) {
+    const links = {
+      'BREADCRUMB': 'https://www.nngroup.com/articles/breadcrumbs/',
+      'LOADING': 'https://medium.com/design-bootcamp/using-loaders-understanding-their-purpose-types-and-best-practices-a62ca991d472',
+      'CONTROL': 'https://www.nngroup.com/articles/user-control-and-freedom/'
+    };
+    return vscode.Uri.parse(links[analysisType] || 'https://www.nngroup.com/articles/ten-usability-heuristics/');
+  }
+
+  _showNotification(issues) {
+    if (issues.length > 0) {
+      vscode.window.showWarningMessage(`React UX Analyzer found ${issues.length} issue(s).`);
+    } else {
+      vscode.window.showInformationMessage(`✅ No UI/UX issues found !`);
     }
+  }
 
-    /**
-     * Show analysis results in VS Code Problems panel and output channel
-     * @param {Object} options - Analysis configuration
-     * @param {string} options.analysisType - Type of analysis (e.g., 'BREADCRUMB', 'LOADING', 'CONTROL EXIT')
-     * @param {string} options.fileName - Full path to analyzed file
-     * @param {Array} options.issues - Array of detected issues
-     * @param {string} options.issueLabel - Label for issues section (e.g., 'MISSING BREADCRUMBS', 'LOADING ISSUES', 'CONTROL EXIT ISSUES')
-     */
-    showResults(options) {
-        const { analysisType, fileName, issues } = options;
-        
-        // Clear previous diagnostics for this file
-        this.diagnosticsCollection.clear();
-        
-        // Show in Problems panel
-        this._showInProblemsPanel(fileName, issues, analysisType);
-        
-        // Also show in output channel for detailed view
-        this._showInOutputChannel(options);
-        
-        // Show user notification
-        this._showUserNotification(analysisType, issues.length);
-    }
+  _showOutputChannel(filePath, issues) {
+    if (issues.length === 0) return;
 
-    /**
-     * Display issues in VS Code Problems panel
-     * @param {string} fileName - Full path to the file
-     * @param {Array} issues - Array of issue objects
-     * @param {string} analysisType - Type of analysis for context
-     */
-    _showInProblemsPanel(fileName, issues, analysisType) {
-        const diagnostics = issues.map(issue => {
-            const range = new vscode.Range(
-                Math.max(0, issue.line - 1), 0,  // line is 0-based in VS Code
-                Math.max(0, issue.line - 1), 1000  // extend to end of line
-            );
-            
-            const diagnostic = new vscode.Diagnostic(
-                range,
-                this._createDeveloperFriendlyMessage(issue, analysisType),
-                this._mapSeverityToVSCode(issue.severity)
-            );
-            
-            // Add metadata for enhanced context
-            diagnostic.source = 'React UX Analyzer';
-            diagnostic.code = {
-                value: this._getHeuristicCode(analysisType),
-                target: this._getDocumentationLink(analysisType)
-            };
-            
-            return diagnostic;
-        });
-        
-        const uri = vscode.Uri.file(fileName);
-        this.diagnosticsCollection.set(uri, diagnostics);
-    }
+    this.outputChannel.clear();
+    this.outputChannel.appendLine(`=== React UX Analyzer Report ===`);
+    this.outputChannel.appendLine(`File: ${filePath}`);
+    this.outputChannel.appendLine(`Issues: ${issues.length}`);
+    this.outputChannel.appendLine('');
 
-    /**
-     * Create developer-friendly, actionable message without UX jargon
-     * @param {Object} issue - Issue object with details
-     * @param {string} analysisType - Type of analysis for context
-     * @returns {string} Developer-friendly message with clear fix instructions
-     */
-    _createDeveloperFriendlyMessage(issue, analysisType) {
-        const heuristic = this._getHeuristicName(analysisType);
-        const problem = this._describeProblem(issue, analysisType);
-        const solution = this._provideActionableSolution(issue, analysisType);
-        const why = this._explainWhy(issue, analysisType);
-        
-        return `${problem} ${solution} ${why} (${heuristic})`;
-    }
+    issues.forEach((issue, i) => {
+      const icon = issue.severity === 'error' ? '🚨' : issue.severity === 'info' ? 'ℹ️' : '⚠️';
+      this.outputChannel.appendLine(`${i + 1}. ${icon} Line ${issue.line}: ${issue.message}`);
+      if (issue.content) this.outputChannel.appendLine(`   Code: ${issue.content}`);
+      this.outputChannel.appendLine(`   Heuristic: ${this._getHeuristicName(issue.analysisType)} (${this._getHeuristicCode(issue.analysisType)})`);
+      this.outputChannel.appendLine(`   More info: ${this._getDocumentationLink(issue.analysisType)}`);
+      this.outputChannel.appendLine('');
+    });
 
-    /**
-     * Describe what went wrong in frontend-friendly terms
-     * @param {Object} issue - Issue details
-     * @param {string} analysisType - Analysis context
-     * @returns {string} Clear problem description
-     */
-    _describeProblem(issue, analysisType) {
-         // Unified messages for LOADING and MODAL regardless of specific issue type
-        if (analysisType === 'LOADING') {
-            return 'Missing loading indicator.';
-        }
-
-        if (analysisType === 'CONTROL') {
-            return 'Missing control elements (e.g., close, back, undo buttons) in component.';
-        }
-        
-        // Specific messages for other analysis types
-        const problemTemplates = {
-            'BREADCRUMB': {
-                'missing-breadcrumb': 'Missing navigation breadcrumbs in component.',
-            },
-            'LOADING': {
-                'missing-loading': 'Missing loading indicator in component.'
-            },
-            'CONTROL': {
-                'missing-control': 'Missing control and freedom elements in component.'
-            }
-        };
-        
-        return problemTemplates[analysisType]?.[issue.type] || 
-               `${issue.type.replace(/-/g, ' ')} detected.`;
-    }
-
-    /**
-     * Provide clear, actionable solution instructions
-     * @param {Object} issue - Issue details
-     * @param {string} analysisType - Analysis context
-     * @returns {string} Step-by-step fix instructions
-     */
-    _provideActionableSolution(issue, analysisType) {
-        // Unified solutions for LOADING and MODAL regardless of specific issue type
-        if (analysisType === 'LOADING') {
-            return 'Add a spinner, skeleton, progress bar or "Loading…" messages.';
-        }
-        
-        if (analysisType === 'CONTROL') {
-            return 'Add visible "Close/Back/Undo" Buttons, "OnClose" Props, or \'X\' Icons for user control.';
-        }
-        
-        // Specific solutions for other analysis types
-        const solutionTemplates = {
-            'BREADCRUMB': {
-                'missing-breadcrumb': 'Add <Breadcrumb> component or <nav aria-label="breadcrumb"> element near the top of this component.'
-            },
-            'LOADING': {
-                'missing-loading': 'Add a spinner, skeleton, progress bar or "Loading…" messages.'
-            },
-            'CONTROL': {
-                'missing-control': 'Add visible "Close" Buttons, OnClose Props, \'X\' Icons, Back or Undo Buttons for user control.'
-            }
-        };
-        
-        return solutionTemplates[analysisType]?.[issue.type] || 
-               'Review the code pattern and add appropriate feedback mechanism.';
-    }
-
-    /**
-     * Explain why this matters for user experience
-     * @param {Object} issue - Issue details
-     * @param {string} analysisType - Analysis context
-     * @returns {string} Brief explanation of user impact
-     */
-    _explainWhy(issue, analysisType) {
-        const whyTemplates = {
-            'BREADCRUMB': 'Users need to know their location in the app hierarchy.',
-            'LOADING': 'Users need visual feedback that the system is working.',
-            'CONTROL': 'Users need to be allowed exit a flow or undo their last action.'
-        };
-        
-        return whyTemplates[analysisType] || 'This improves user experience.';
-    }
-
-    /**
-     * Get Nielsen heuristic name for consistent reference
-     * @param {string} analysisType - Type of analysis
-     * @returns {string} Heuristic identifier
-     */
-    _getHeuristicName(analysisType) {
-        const heuristics = {
-            'BREADCRUMB': 'Nielsen #1: Visibility of System Status',
-            'LOADING': 'Nielsen #1: Visibility of System Status',
-            'CONTROL': 'Nielsen #3: User Control and Freedom',
-            'NAVIGATION': 'Nielsen #2: Match Between System and Real World',
-            'ERROR': 'Nielsen #9: Help Users Recognize and Recover from Errors'
-        };
-        
-        return heuristics[analysisType] || 'Nielsen Heuristic';
-    }
-
-    /**
-     * Get heuristic code for VS Code diagnostic system
-     * Format: RUX[Heuristic#][Detector#] - e.g., RUX101 = Heuristic 1, Detector 1
-     * @param {string} analysisType - Type of analysis
-     * @returns {string} Structured code identifier
-     */
-    _getHeuristicCode(analysisType) {
-        const codes = {
-            // Nielsen Heuristic #1: Visibility of System Status (RUX1xx)
-            'BREADCRUMB': 'RUX101',  // Heuristic 1, Detector 1
-            'LOADING': 'RUX102',     // Heuristic 1, Detector 2
-            
-            // Nielsen Heuristic #2: Match Between System and Real World (RUX2xx)
-            'NAVIGATION': 'RUX201',  // Heuristic 2, Detector 1
-
-            // Nielsen Heuristic #3: User Control and Freedom (RUX3xx)
-            'CONTROL': 'RUX301',       // Heuristic 3, Detector 1
-            
-            // Nielsen Heuristic #9: Help Users Recognize and Recover from Errors (RUX9xx)
-            'ERROR': 'RUX901',       // Heuristic 9, Detector 1
-        };
-        
-        return codes[analysisType] || 'RUX000';
-    }
-
-    /**
-     * Generate documentation link for further explanation
-     * @param {string} analysisType - Type of analysis
-     * @returns {vscode.Uri} Link to professional UX insights documentation
-     */
-    _getDocumentationLink(analysisType) {
-        const docLinks = {
-            'BREADCRUMB': 'https://www.nngroup.com/articles/breadcrumbs/',
-            'LOADING': 'https://medium.com/design-bootcamp/using-loaders-understanding-their-purpose-types-and-best-practices-a62ca991d472',
-            'CONTROL': 'https://www.nngroup.com/articles/user-control-and-freedom/',
-            'NAVIGATION': 'https://www.nngroup.com/articles/navigation-cognitive-load/',
-            'ERROR': 'https://www.nngroup.com/articles/error-message-guidelines/'
-        };
-        
-        return vscode.Uri.parse(docLinks[analysisType] || 'https://www.nngroup.com/articles/ten-usability-heuristics/');
-    }
-
-    /**
-     * Map issue severity to VS Code diagnostic severity
-     * @param {string} severity - Issue severity from detector
-     * @returns {vscode.DiagnosticSeverity} VS Code severity level
-     */
-    _mapSeverityToVSCode(severity) {
-        const severityMap = {
-            'error': vscode.DiagnosticSeverity.Error,
-            'warning': vscode.DiagnosticSeverity.Warning,
-            'suggestion': vscode.DiagnosticSeverity.Information,
-            'info': vscode.DiagnosticSeverity.Hint
-        };
-        
-        return severityMap[severity] || vscode.DiagnosticSeverity.Warning;
-    }
-
-     /**
-     * Show detailed analysis results in output channel (legacy support)
-     * @param {Object} options - Analysis configuration
-     */
-    _showInOutputChannel(options) {
-        const { analysisType, fileName, issues, issueLabel } = options;
-        
-        // Create or reuse output channel
-        if (!this.outputChannel) {
-            this.outputChannel = vscode.window.createOutputChannel('React UX Analyzer');
-        }
-        this.outputChannel.clear();
-        
-        // Header section
-        this.outputChannel.appendLine(`=== ${analysisType.toUpperCase()} ANALYSIS ===`);
-        this.outputChannel.appendLine(`File: ${fileName}`);
-        this.outputChannel.appendLine(`${this._getIssueCountLabel(analysisType)}: ${issues.length}`);
-        this.outputChannel.appendLine('');
-        
-        // Issues section
-        if (issues.length > 0) {
-            this.outputChannel.appendLine(`${this._getIssueIcon(analysisType)} ${issueLabel.toUpperCase()}:`);
-            this._displayIssuesInOutputChannel(issues);
-        }
-        
-        this.outputChannel.show();
-    }
-
-    /**
-     * Display individual issues with consistent formatting in output channel
-     * @param {Array} issues - Array of issue objects
-     */
-    _displayIssuesInOutputChannel(issues) {
-        issues.forEach((issue, index) => {
-            const severityIcon = this._getSeverityIcon(issue.severity);
-            this.outputChannel.appendLine(`${index + 1}. ${severityIcon} Line ${issue.line}: ${issue.type}`);
-            this.outputChannel.appendLine(`   Content: ${issue.content}`);
-            this.outputChannel.appendLine(`   Message: ${issue.message}`);
-            this.outputChannel.appendLine('');
-        });
-    
-    }
-
-    /**
-     * Get severity icon based on issue severity
-     * @param {string} severity - Issue severity level
-     * @returns {string} Appropriate icon
-     */
-    _getSeverityIcon(severity) {
-        const icons = {
-            'warning': '❌',
-            'suggestion': '💡',
-            'error': '🚨',
-            'info': 'ℹ️'
-        };
-        return icons[severity] || '⚠️';
-    }
-
-    /**
-     * Get main issue icon for analysis type
-     * @param {string} analysisType - Type of analysis
-     * @returns {string} Appropriate icon
-     */
-    _getIssueIcon(analysisType) {
-        const icons = {
-            'BREADCRUMB': '❌',
-            'LOADING': '⚠️',
-            'NAVIGATION': '🧭',
-            'ERROR': '🚨'
-        };
-        return icons[analysisType.toUpperCase()] || '⚠️';
-    }
-
-    /**
-     * Get issue count label for analysis type
-     * @param {string} analysisType - Type of analysis
-     * @returns {string} Appropriate label
-     */
-    _getIssueCountLabel(analysisType) {
-        const labels = {
-            'BREADCRUMB': 'Missing breadcrumbs',
-            'LOADING': 'Loading issues',
-            'CONTROL': 'Control exit issues',
-            'NAVIGATION': 'Navigation issues',
-            'ERROR': 'Error handling issues'
-        };
-        return labels[analysisType.toUpperCase()] || 'Issues found';
-    }
-
-    /**
-     * Show appropriate user notification about Problems panel integration
-     * @param {string} analysisType - Type of analysis
-     * @param {number} issueCount - Number of issues found
-     */
-    _showUserNotification(analysisType, issueCount) {
-        const analysisName = analysisType.toLowerCase();
-        
-        if (issueCount > 0) {
-            vscode.window.showWarningMessage(
-                `Found ${issueCount} ${analysisName} issues! Check Problems panel for actionable fixes.`
-            );
-        } else {
-            vscode.window.showInformationMessage(
-                `✅ No ${analysisName} issues found! Your code follows UX best practices.`
-            );
-        }
-    }
-
-
-       
-
+    this.outputChannel.show(true);
+  }
 }
 
 module.exports = FeedbackHandler;
