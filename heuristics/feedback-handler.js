@@ -82,7 +82,8 @@ class FeedbackHandler {
     const heuristics = {
       'BREADCRUMB': 'Nielsen #1: Visibility of System Status',
       'LOADING': 'Nielsen #1: Visibility of System Status',
-      'CONTROL': 'Nielsen #3: User Control and Freedom'
+      'CONTROL': 'Nielsen #3: User Control and Freedom',
+      'CONSISTENCY': 'Nielsen #4: Consistency and Standards'
     };
     return heuristics[analysisType] || 'Nielsen Heuristic';
   }
@@ -91,7 +92,8 @@ class FeedbackHandler {
     const codes = {
       'BREADCRUMB': 'RUX101',
       'LOADING': 'RUX102',
-      'CONTROL': 'RUX301'
+      'CONTROL': 'RUX301',
+      'CONSISTENCY': 'RUX401'
     };
     return codes[analysisType] || 'RUX000';
   }
@@ -100,7 +102,8 @@ class FeedbackHandler {
     const links = {
       'BREADCRUMB': 'https://www.nngroup.com/articles/breadcrumbs/',
       'LOADING': 'https://medium.com/design-bootcamp/using-loaders-understanding-their-purpose-types-and-best-practices-a62ca991d472',
-      'CONTROL': 'https://www.nngroup.com/articles/user-control-and-freedom/'
+      'CONTROL': 'https://www.nngroup.com/articles/user-control-and-freedom/',
+      'CONSISTENCY': 'https://www.nngroup.com/articles/consistency-and-standards/'
     };
     return vscode.Uri.parse(links[analysisType] || 'https://www.nngroup.com/articles/ten-usability-heuristics/');
   }

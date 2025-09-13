@@ -36,8 +36,10 @@ function detectControlExits(content) {
           feedback.push({
             type: "missing-control",
             line: node.loc.start.line,
-            message: `${elementName} missing onClose handler. Users may be trapped.`,
+            message: `${elementName} is missing a close option for users.`,
             severity: "warning",
+            action: "Add `onClose` prop to allow users to exit the modal/dialog.",
+            why: "Users need to close modals or dialogs to regain control of the interface."
           });
         }
 

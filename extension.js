@@ -4,7 +4,7 @@
  * - Project-wide usability scan for JSX files in `src`
  */
 const vscode = require('vscode');
-const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, FeedbackHandler } = require('./heuristics');
+const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, FeedbackHandler } = require('./heuristics');
 
 async function usabilityAnalyzeReactFiles() {
   const feedbackHandler = new FeedbackHandler();
@@ -48,6 +48,14 @@ async function usabilityAnalyzeReactFiles() {
       feedbackHandler.showResults(
         fileName,
         controlExitIssues.map(issue => ({ ...issue, analysisType: 'CONTROL' }))
+      );
+    }
+    // --- Page Consistency detector ---
+    const consistencyIssues = detectPageConsistency(content);
+    if (consistencyIssues.length > 0) {
+      feedbackHandler.showResults(
+        fileName,
+        consistencyIssues.map(issue => ({ ...issue, analysisType: 'CONSISTENCY' }))
       );
     }
 
@@ -117,7 +125,7 @@ function activate(context) {
     }
   });
 
-  // Command: Analyze Control Exit (class-based detector)
+  // Command: Analyze Control Exit
   const analyzeControlExitCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeControlExits', () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -142,6 +150,31 @@ function activate(context) {
     }
   });
 
+  //Command: Analyze Page Consistency
+  const analyzePageConsistencyCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzePageConsistency', () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
+
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
+
+    try {
+      const issues = detectPageConsistency(content);
+
+      feedbackHandler.showResults(fileName, issues.map(issue => ({
+        ...issue,
+        analysisType: 'CONSISTENCY'
+      })));
+    } catch (err) {
+      console.error(`Error running Page Consistency detector on ${fileName}:`, err);
+      vscode.window.showErrorMessage(`Page Consistency analysis failed: ${err.message}`);
+    }
+  });
+
   // Project-wide command: Analyze all React files in src folder
   const analyzeProjectCommand = vscode.commands.registerCommand('react-ux-analyzer.usabilityAnalyzeReactFiles', usabilityAnalyzeReactFiles);
 
@@ -150,6 +183,7 @@ function activate(context) {
   context.subscriptions.push(analyzeLoadingCommand);
   context.subscriptions.push(analyzeControlExitCommand);
   context.subscriptions.push(analyzeProjectCommand);
+  context.subscriptions.push(analyzePageConsistencyCommand);
 
   console.log('✅ React UX Analyzer commands registered!');
 }
