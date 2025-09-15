@@ -15,10 +15,12 @@ function detectControlExits(content) {
   const destructiveButtons = [];
   const undoButtons = [];
 
-  const ast = parse(content, {
-    sourceType: "module",
-    plugins: ["jsx", "typescript"],
-  });
+  let ast;
+  try {
+    ast = parse(content, { sourceType: "module", plugins: ["jsx"], errorRecovery: true });
+  } catch (err) {
+    throw new Error("JSX code could not be parsed: " + err.message);
+  }
 
   traverse(ast, {
     JSXElement(path) {

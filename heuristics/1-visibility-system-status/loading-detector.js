@@ -12,7 +12,7 @@ function detectLoadingPatterns(content) {
   try {
     ast = parse(content, {
       sourceType: "module",
-      plugins: ["jsx", "typescript", "classProperties"],
+      plugins: ["jsx", "classProperties"],
       errorRecovery: true
     });
   } catch (err) {
@@ -29,10 +29,10 @@ function detectLoadingPatterns(content) {
 
     const name = node.openingElement.name;
 
-    // 1️⃣ Recognize Spinner / CircularProgress
+    // 1 Recognize Spinner / CircularProgress
     if (name.type === "JSXIdentifier" && /spinner|circularprogress/i.test(name.name)) return true;
 
-    // 2️⃣ Tailwind animate-spin check for svg, span, div
+    // 2 Tailwind animate-spin check for svg, span, div
     if (name.type === "JSXIdentifier" && spinnerTags.includes(name.name.toLowerCase())) {
       const attrs = node.openingElement.attributes || [];
       const hasAnimateSpin = attrs.some(
@@ -59,7 +59,7 @@ function detectLoadingPatterns(content) {
       return true; // valid spinner
     }
 
-    // 3️⃣ Check children recursively for text or JSX expressions
+    // 3 Check children recursively for text or JSX expressions
     if (node.children) {
       for (const child of node.children) {
         if (child.type === "JSXText" && /loading|submitting|processing/i.test(child.value)) return true;
@@ -89,7 +89,7 @@ function detectLoadingPatterns(content) {
   }
 
   traverse(ast, {
-    // 1️⃣ Detect fetch / axios calls without loading feedback
+    // Detect fetch / axios calls without loading feedback
     CallExpression(path) {
     const callee = path.node.callee;
     const isFetch =
@@ -105,11 +105,11 @@ function detectLoadingPatterns(content) {
 
       if (!bodyNode) return; // safety guard
 
-      // 1️⃣ Block statement (normal function)
+      // Block statement (normal function)
       if (bodyNode.type === "BlockStatement") {
         bodyStatements = bodyNode.body;
       } else {
-        // 2️⃣ Expression-bodied arrow function
+        // Expression-bodied arrow function
         bodyStatements = [bodyNode];
       }
 
@@ -138,7 +138,7 @@ function detectLoadingPatterns(content) {
     }
   },
 
-    // 2️⃣ Detect buttons missing disabled={loading}
+    // Detect buttons missing disabled={loading}
     JSXElement(path) {
     const node = path.node;
 

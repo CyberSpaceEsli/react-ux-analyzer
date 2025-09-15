@@ -4,7 +4,7 @@
  * - Project-wide usability scan for JSX files in `src`
  */
 const vscode = require('vscode');
-const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, FeedbackHandler } = require('./heuristics');
+const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, detectShortcuts, FeedbackHandler } = require('./heuristics');
 
 async function usabilityAnalyzeReactFiles() {
   const feedbackHandler = new FeedbackHandler();
@@ -56,6 +56,14 @@ async function usabilityAnalyzeReactFiles() {
       feedbackHandler.showResults(
         fileName,
         consistencyIssues.map(issue => ({ ...issue, analysisType: 'CONSISTENCY' }))
+      );
+    }
+
+    const  shortcutIssues = detectShortcuts(content);
+    if (shortcutIssues.length > 0) {
+      feedbackHandler.showResults(
+        fileName,
+        shortcutIssues.map(issue => ({ ...issue, analysisType: 'FLEXIBILITY & EFFICIENCY' }))
       );
     }
 
@@ -175,6 +183,31 @@ function activate(context) {
     }
   });
 
+  //Command: Analyze Shortcuts and Efficiency
+  const analyzeShortcutsCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeShortcuts', () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
+
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
+
+    try {
+      const issues = detectShortcuts(content);
+
+      feedbackHandler.showResults(fileName, issues.map(issue => ({
+        ...issue,
+        analysisType: 'FLEXIBILITY & EFFICIENCY'
+      })));
+    } catch (err) {
+      console.error(`Error running Shortcuts detector on ${fileName}:`, err);
+      vscode.window.showErrorMessage(`Shortcuts analysis failed: ${err.message}`);
+    }
+  });
+
   // Project-wide command: Analyze all React files in src folder
   const analyzeProjectCommand = vscode.commands.registerCommand('react-ux-analyzer.usabilityAnalyzeReactFiles', usabilityAnalyzeReactFiles);
 
@@ -184,6 +217,7 @@ function activate(context) {
   context.subscriptions.push(analyzeControlExitCommand);
   context.subscriptions.push(analyzeProjectCommand);
   context.subscriptions.push(analyzePageConsistencyCommand);
+  context.subscriptions.push(analyzeShortcutsCommand);
 
   console.log('✅ React UX Analyzer commands registered!');
 }

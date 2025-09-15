@@ -83,7 +83,8 @@ class FeedbackHandler {
       'BREADCRUMB': 'Nielsen #1: Visibility of System Status',
       'LOADING': 'Nielsen #1: Visibility of System Status',
       'CONTROL': 'Nielsen #3: User Control and Freedom',
-      'CONSISTENCY': 'Nielsen #4: Consistency and Standards'
+      'CONSISTENCY': 'Nielsen #4: Consistency and Standards',
+      'FLEXIBILITY & EFFICIENCY': 'Nielsen #7: Flexibility and Efficiency of Use'
     };
     return heuristics[analysisType] || 'Nielsen Heuristic';
   }
@@ -93,7 +94,8 @@ class FeedbackHandler {
       'BREADCRUMB': 'RUX101',
       'LOADING': 'RUX102',
       'CONTROL': 'RUX301',
-      'CONSISTENCY': 'RUX401'
+      'CONSISTENCY': 'RUX401',
+      'FLEXIBILITY & EFFICIENCY': 'RUX701'
     };
     return codes[analysisType] || 'RUX000';
   }
@@ -103,7 +105,8 @@ class FeedbackHandler {
       'BREADCRUMB': 'https://www.nngroup.com/articles/breadcrumbs/',
       'LOADING': 'https://medium.com/design-bootcamp/using-loaders-understanding-their-purpose-types-and-best-practices-a62ca991d472',
       'CONTROL': 'https://www.nngroup.com/articles/user-control-and-freedom/',
-      'CONSISTENCY': 'https://www.nngroup.com/articles/consistency-and-standards/'
+      'CONSISTENCY': 'https://www.nngroup.com/articles/consistency-and-standards/',
+      'FLEXIBILITY & EFFICIENCY': 'https://www.nngroup.com/articles/flexibility-and-efficiency-of-use/'
     };
     return vscode.Uri.parse(links[analysisType] || 'https://www.nngroup.com/articles/ten-usability-heuristics/');
   }
