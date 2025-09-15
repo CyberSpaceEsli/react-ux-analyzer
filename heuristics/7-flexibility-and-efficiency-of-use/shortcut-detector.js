@@ -110,6 +110,8 @@ function detectShortcuts(content) {
             message:
               "This `useEffect` looks like it handles keyboard input, but no `keydown` event listener was found.",
             severity: "warning",
+            action: "Add `document.addEventListener('keydown', handler)` inside the effect.",
+            why: "Keyboard shortcuts need a keydown listener to function.",
           });
         }
 
@@ -120,6 +122,8 @@ function detectShortcuts(content) {
           message:
             "`keydown` listener was added via `addEventListener`, but no `removeEventListener` found in cleanup.",
           severity: "warning",
+          action: "Add `document.removeEventListener('keydown', handler)` in the cleanup function.",
+          why: "Keyboard shortcuts need to be removed when the component unmounts.",
         });
       }
 
@@ -149,11 +153,13 @@ function detectShortcuts(content) {
       feedback.push({
         type: "missing-shortcut-hint",
         line: lineNumber,
-        message: `No visible shortcut hints (e.g. "Ctrl+S", "⌘+P") found in <${tag}> with action items like "save" or "open".`,
+        message: `No visible shortcut hints found in <${tag}> with action items like "save" or "open".`,
         severity: "warning",
+        action: `Add visible shortcut hints (e.g. "Ctrl+S") next to action items.`,
+        why: "Visible shortcut hints help users discover keyboard shortcuts for efficiency.",
       });
     }
-  });
+      });
 
   return feedback;
 }
