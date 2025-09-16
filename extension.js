@@ -4,7 +4,7 @@
  * - Project-wide usability scan for JSX files in `src`
  */
 const vscode = require('vscode');
-const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, detectRecognitionCues, detectShortcuts, detectHelpFeatures, FeedbackHandler } = require('./heuristics');
+const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, detectErrorPrevention, detectRecognitionCues, detectShortcuts, detectHelpErrorRecognition, detectHelpFeatures, FeedbackHandler } = require('./heuristics');
 
 async function usabilityAnalyzeReactFiles() {
   const feedbackHandler = new FeedbackHandler();
@@ -59,6 +59,15 @@ async function usabilityAnalyzeReactFiles() {
       );
     }
 
+    // --- Error Prevention detector ---
+    const errorPreventionIssues = detectErrorPrevention(content);
+    if (errorPreventionIssues.length > 0) {
+      feedbackHandler.showResults(
+        fileName,
+        errorPreventionIssues.map(issue => ({ ...issue, analysisType: 'ERROR_PREVENTION' }))
+      );
+    }
+
     // --- Recognition Cues detector ---  
     const recognitionIssues = detectRecognitionCues(content); 
     if (recognitionIssues.length > 0) {
@@ -74,6 +83,15 @@ async function usabilityAnalyzeReactFiles() {
       feedbackHandler.showResults(
         fileName,
         shortcutIssues.map(issue => ({ ...issue, analysisType: 'FLEXIBILITY & EFFICIENCY' }))
+      );
+    }
+
+    // --- Help Error Recognition detector ---
+    const helpErrorIssues = detectHelpErrorRecognition(content);
+    if (helpErrorIssues.length > 0) {
+      feedbackHandler.showResults(
+        fileName,
+        helpErrorIssues.map(issue => ({ ...issue, analysisType: 'ERROR_RECOVERY' }))
       );
     }
 
@@ -202,6 +220,31 @@ function activate(context) {
     }
   });
 
+  //Command: Analyze Error Prevention
+  const analyzeErrorPreventionCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeErrorPrevention', () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
+
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
+
+    try {
+      const issues = detectErrorPrevention(content);
+
+      feedbackHandler.showResults(fileName, issues.map(issue => ({
+        ...issue,
+        analysisType: 'ERROR_PREVENTION'
+      })));
+    } catch (err) {
+      console.error(`Error running Error Prevention detector on ${fileName}:`, err);
+      vscode.window.showErrorMessage(`Error Prevention analysis failed: ${err.message}`);
+    }
+  });
+
   //Command: Analyze Recognition Cues
   const analyzeRecognitionCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeRecognition', () => {
     const editor = vscode.window.activeTextEditor;
@@ -252,6 +295,31 @@ function activate(context) {
     }
   });
 
+  //Command: Analyze Help Error Recognition
+  const analyzeHelpErrorCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeHelpError', () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
+
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
+
+    try {
+      const issues = detectHelpErrorRecognition(content);
+
+      feedbackHandler.showResults(fileName, issues.map(issue => ({
+        ...issue,
+        analysisType: 'ERROR_RECOVERY'
+      })));
+    } catch (err) {
+      console.error(`Error running Help Error Recognition detector on ${fileName}:`, err);
+      vscode.window.showErrorMessage(`Help Error Recognition analysis failed: ${err.message}`);
+    }
+  });
+
   //Command: Analyze Help Features
   const analyzeHelpCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeHelp', () => {
     const editor = vscode.window.activeTextEditor;
@@ -286,8 +354,10 @@ function activate(context) {
   context.subscriptions.push(analyzeControlExitCommand);
   context.subscriptions.push(analyzeProjectCommand);
   context.subscriptions.push(analyzePageConsistencyCommand);
+  context.subscriptions.push(analyzeErrorPreventionCommand);
   context.subscriptions.push(analyzeRecognitionCommand);
   context.subscriptions.push(analyzeShortcutsCommand);
+  context.subscriptions.push(analyzeHelpErrorCommand);
   context.subscriptions.push(analyzeHelpCommand);
 
   console.log('✅ React UX Analyzer commands registered!');

@@ -84,8 +84,10 @@ class FeedbackHandler {
       'LOADING': 'Nielsen #1: Visibility of System Status',
       'CONTROL': 'Nielsen #3: User Control and Freedom',
       'CONSISTENCY': 'Nielsen #4: Consistency and Standards',
+      'ERROR_PREVENTION': 'Nielsen #5: Error Prevention',
       'RECOGNITION': 'Nielsen #6: Recognition Rather Than Recall',
       'FLEXIBILITY & EFFICIENCY': 'Nielsen #7: Flexibility and Efficiency of Use',
+      'ERROR_RECOVERY': 'Nielsen #9: Help Users Recognize, Diagnose, and Recover from Errors',
       'HELP': 'Nielsen #10: Help and Documentation'
     };
     return heuristics[analysisType] || 'Nielsen Heuristic';
@@ -97,8 +99,10 @@ class FeedbackHandler {
       'LOADING': 'RUX102',
       'CONTROL': 'RUX301',
       'CONSISTENCY': 'RUX401',
+      'ERROR_PREVENTION': 'RUX501',
       'RECOGNITION': 'RUX601',
       'FLEXIBILITY & EFFICIENCY': 'RUX701',
+      'ERROR_RECOVERY': 'RUX901',
       'HELP': 'RUX1001'
     };
     return codes[analysisType] || 'RUX000';
@@ -110,8 +114,10 @@ class FeedbackHandler {
       'LOADING': 'https://medium.com/design-bootcamp/using-loaders-understanding-their-purpose-types-and-best-practices-a62ca991d472',
       'CONTROL': 'https://www.nngroup.com/articles/user-control-and-freedom/',
       'CONSISTENCY': 'https://www.nngroup.com/articles/consistency-and-standards/',
+      'ERROR_PREVENTION': 'https://www.nngroup.com/articles/error-prevention/',
       'RECOGNITION': 'https://www.nngroup.com/articles/recognition-vs-recall/',
       'FLEXIBILITY & EFFICIENCY': 'https://www.nngroup.com/articles/ui-copy/#toc-guidelines-for-command-shortcuts-3',
+      'ERROR_RECOVERY': 'https://www.nngroup.com/articles/help-users-recognize-diagnose-and-recover-from-errors/',
       'HELP': 'https://www.nngroup.com/articles/help-and-documentation/'
     };
     return vscode.Uri.parse(links[analysisType] || 'https://www.nngroup.com/articles/ten-usability-heuristics/');

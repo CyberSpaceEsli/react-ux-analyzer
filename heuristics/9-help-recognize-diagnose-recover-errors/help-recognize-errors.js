@@ -1,0 +1,136 @@
+const { parse } = require("@babel/parser");
+const traverse = require("@babel/traverse").default;
+
+/**
+ * detectHelpErrorRecognition - Scans React code for usability issues based on
+ * Nielsen's Heuristic #9: Help Users Recognize, Diagnose, and Recover from Errors
+ */
+function detectHelpErrorRecognition(content) {
+  const feedback = [];
+
+  const technicalErrorRegex = /\b(error\s*\d{3,4}|api error|err_?[a-z0-9_]+|code\s*\d+|network error|request failed|failed to fetch)\b/i;
+
+  // helper to extract all text from a JSX subtree
+  function extractJSXText(node) {
+    if (node.type === "JSXText") return node.value;
+    if (node.type === "JSXElement" && node.children) {
+      return node.children.map(extractJSXText).join(" ");
+    }
+    return "";
+  }
+
+  let ast;
+  try {
+    ast = parse(content, {
+      sourceType: "module",
+      plugins: ["jsx"],
+      errorRecovery: true,
+    });
+  } catch (err) {
+    throw new Error("Could not parse JSX content: " + err.message);
+  }
+
+  traverse(ast, {
+    JSXElement(path) {
+      const node = path.node;
+      const opening = node.openingElement;
+      const tagNode = opening?.name;
+      if (!tagNode || tagNode.type !== "JSXIdentifier") return;
+
+      const tagName = tagNode.name.toLowerCase();
+      const line = node.loc?.start?.line ?? null;
+
+      const attrs = opening?.attributes ?? [];
+
+      // Determine if this is an "error-like" component or styled that way
+      const isErrorComponent = ["error", "alert", "message", "notification", "errormessage", "formerror"].includes(tagName.toLowerCase());
+
+      const classAttr = attrs.find(
+        (attr) =>
+          attr.type === "JSXAttribute" &&
+          attr.name?.name === "className" &&
+          attr.value?.type === "StringLiteral"
+      );
+
+      const classNameVal = classAttr?.type === "JSXAttribute" && classAttr?.value?.type === "StringLiteral" ? classAttr?.value?.value ?? "" : "";
+
+      const isErrorClass = /(error|alert|danger|fail|invalid|warning|notice|msg|feedback)[-_]?/i.test(classNameVal);
+
+      // Inline style check
+      const styleAttr = attrs.find(
+        (attr) =>
+          attr.type === "JSXAttribute" &&
+          attr.name?.name === "style" &&
+          attr.value?.type === "JSXExpressionContainer"
+      );
+       
+    let hasRedStyle = false;
+    let hasBoldStyle = false;
+
+    if (
+      styleAttr?.type === "JSXAttribute" &&
+      styleAttr.value?.type === "JSXExpressionContainer" &&
+      styleAttr.value.expression?.type === "ObjectExpression"
+    ) {
+    // Check for color: 'red' or fontWeight: 'bold' in style object    
+    hasRedStyle = styleAttr.value.expression.properties.some(
+    (prop) =>
+        prop.type === "ObjectProperty" &&
+        (
+          (prop.key.type === "Identifier" && prop.key.name === "color") ||
+          (prop.key.type === "StringLiteral" && prop.key.value === "color")
+        ) &&
+        prop.value.type === "StringLiteral" &&
+        /red/i.test(prop.value.value)
+    );
+
+    hasBoldStyle = styleAttr.value.expression.properties.some(
+    (prop) =>
+        prop.type === "ObjectProperty" &&
+        (
+          (prop.key.type === "Identifier" && prop.key.name === "fontWeight") ||
+          (prop.key.type === "StringLiteral" && prop.key.value === "fontWeight")
+        ) &&
+        prop.value.type === "StringLiteral" &&
+        /(bold|font|700|800|900)/i.test(prop.value.value)
+    );
+    }
+
+    const text = extractJSXText(node);
+
+    const matchesTechnical = technicalErrorRegex.test(text);
+
+    if (isErrorComponent || isErrorClass || hasRedStyle || matchesTechnical) {
+        // 1. If technical error phrasing is used
+        if (matchesTechnical) {
+          feedback.push({
+            type: "technical-error-message",
+            line,
+            message: `User-facing error contains technical jargon or error code ("${text.trim()}"). Express errors in plain language and offer a constructive suggestion.`,
+            severity: "warning",
+          });
+        }
+
+    if (isErrorComponent || isErrorClass || hasRedStyle || matchesTechnical) {
+
+      // 2. If there is no visual indication of an error
+      const hasVisualIndicator = isErrorClass || hasRedStyle || hasBoldStyle;
+
+      if (!hasVisualIndicator) {
+        feedback.push({
+          type: "error-lacks-visual-style",
+          line,
+          message: `Error message detected but lacks visual cues like red color and bold font.`,
+          severity: "warning",
+        });
+      }
+    }
+
+    }
+    },
+  });
+
+  return feedback;
+}
+
+module.exports = { detectHelpErrorRecognition };

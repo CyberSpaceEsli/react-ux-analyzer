@@ -41,6 +41,11 @@
         "category": "React UX Analyzer"
       },
       {
+        "command": "react-ux-analyzer.analyzeErrorPrevention",
+        "title": "Analyze Error Prevention (Nielsen #5: Error Prevention)",
+        "category": "React UX Analyzer"
+      },
+      {
         "command": "react-ux-analyzer.analyzeRecognition",
         "title": "Analyze Recognition Cues (Nielsen #6: Recognition Rather Than Recall)",
         "category": "React UX Analyzer"
@@ -48,6 +53,11 @@
       {
         "command": "react-ux-analyzer.analyzeShortcuts",
         "title": "Analyze Shortcuts (Nielsen #7: Flexibility & Efficiency of Use)",
+        "category": "React UX Analyzer"
+      },
+      {
+        "command": "react-ux-analyzer.analyzeHelpError",
+        "title": "Analyze Help for Error Recognition (Nielsen #9: Help Users Recognize, Diagnose, and Recover from Errors)",
         "category": "React UX Analyzer"
       },
       {
