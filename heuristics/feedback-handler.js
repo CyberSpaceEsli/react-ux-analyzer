@@ -84,6 +84,7 @@ class FeedbackHandler {
       'LOADING': 'Nielsen #1: Visibility of System Status',
       'CONTROL': 'Nielsen #3: User Control and Freedom',
       'CONSISTENCY': 'Nielsen #4: Consistency and Standards',
+      'RECOGNITION': 'Nielsen #6: Recognition Rather Than Recall',
       'FLEXIBILITY & EFFICIENCY': 'Nielsen #7: Flexibility and Efficiency of Use',
       'HELP': 'Nielsen #10: Help and Documentation'
     };
@@ -96,6 +97,7 @@ class FeedbackHandler {
       'LOADING': 'RUX102',
       'CONTROL': 'RUX301',
       'CONSISTENCY': 'RUX401',
+      'RECOGNITION': 'RUX601',
       'FLEXIBILITY & EFFICIENCY': 'RUX701',
       'HELP': 'RUX1001'
     };
@@ -108,6 +110,7 @@ class FeedbackHandler {
       'LOADING': 'https://medium.com/design-bootcamp/using-loaders-understanding-their-purpose-types-and-best-practices-a62ca991d472',
       'CONTROL': 'https://www.nngroup.com/articles/user-control-and-freedom/',
       'CONSISTENCY': 'https://www.nngroup.com/articles/consistency-and-standards/',
+      'RECOGNITION': 'https://www.nngroup.com/articles/recognition-vs-recall/',
       'FLEXIBILITY & EFFICIENCY': 'https://www.nngroup.com/articles/ui-copy/#toc-guidelines-for-command-shortcuts-3',
       'HELP': 'https://www.nngroup.com/articles/help-and-documentation/'
     };

@@ -126,7 +126,6 @@ function detectHelpFeatures(content) {
       errorRecovery: true,
     });
   } catch (err) {
-    console.error("AST Parse error:", err.message);
     throw new Error("Could not parse JSX content: " + err.message);
   }
 

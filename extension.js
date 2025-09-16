@@ -4,7 +4,7 @@
  * - Project-wide usability scan for JSX files in `src`
  */
 const vscode = require('vscode');
-const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, detectShortcuts, detectHelpFeatures, FeedbackHandler } = require('./heuristics');
+const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, detectRecognitionCues, detectShortcuts, detectHelpFeatures, FeedbackHandler } = require('./heuristics');
 
 async function usabilityAnalyzeReactFiles() {
   const feedbackHandler = new FeedbackHandler();
@@ -56,6 +56,15 @@ async function usabilityAnalyzeReactFiles() {
       feedbackHandler.showResults(
         fileName,
         consistencyIssues.map(issue => ({ ...issue, analysisType: 'CONSISTENCY' }))
+      );
+    }
+
+    // --- Recognition Cues detector ---  
+    const recognitionIssues = detectRecognitionCues(content); 
+    if (recognitionIssues.length > 0) {
+      feedbackHandler.showResults(
+        fileName,
+        recognitionIssues.map(issue => ({ ...issue, analysisType: 'RECOGNITION' }))
       );
     }
 
@@ -193,6 +202,31 @@ function activate(context) {
     }
   });
 
+  //Command: Analyze Recognition Cues
+  const analyzeRecognitionCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeRecognition', () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
+
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
+
+    try {
+      const issues = detectRecognitionCues(content);
+
+      feedbackHandler.showResults(fileName, issues.map(issue => ({
+        ...issue,
+        analysisType: 'RECOGNITION'
+      })));
+    } catch (err) {
+      console.error(`Error running Recognition Cues detector on ${fileName}:`, err);
+      vscode.window.showErrorMessage(`Recognition Cues analysis failed: ${err.message}`);
+    }
+  });
+
   //Command: Analyze Shortcuts and Efficiency
   const analyzeShortcutsCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeShortcuts', () => {
     const editor = vscode.window.activeTextEditor;
@@ -252,6 +286,7 @@ function activate(context) {
   context.subscriptions.push(analyzeControlExitCommand);
   context.subscriptions.push(analyzeProjectCommand);
   context.subscriptions.push(analyzePageConsistencyCommand);
+  context.subscriptions.push(analyzeRecognitionCommand);
   context.subscriptions.push(analyzeShortcutsCommand);
   context.subscriptions.push(analyzeHelpCommand);
 

@@ -9,6 +9,7 @@ const { detectBreadcrumbs } = require('./1-visibility-system-status/breadcrumb-d
 const { detectLoadingPatterns } = require('./1-visibility-system-status/loading-detector');
 const { detectControlExits } = require('./3-user-control-freedom/control-exit-detector');
 const { detectPageConsistency } = require('./4-consistency-and-standards/page-consistency-detector');
+const { detectRecognitionCues } = require('./6-recognition-rather-recall/recognition-detector');
 const { detectShortcuts } = require('./7-flexibility-and-efficiency-of-use/shortcut-detector');
 const { detectHelpFeatures } = require('./10-help-and-documentation/help-detector');
 
@@ -20,6 +21,7 @@ module.exports = {
   detectLoadingPatterns,
   detectControlExits,
   detectPageConsistency,
+  detectRecognitionCues,
   detectShortcuts,
   detectHelpFeatures,
   

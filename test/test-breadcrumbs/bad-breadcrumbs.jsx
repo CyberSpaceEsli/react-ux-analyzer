@@ -11,7 +11,7 @@ const BadBreadcrumbsPage = () => {
           <h1>User Settings</h1>
         </header>
         
-        <main>. 
+        <main> 
           <Section className="profile-section">
             <h2>Profile Information</h2>
             <p>This page lacks breadcrumb navigation.</p>

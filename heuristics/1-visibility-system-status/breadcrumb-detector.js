@@ -8,8 +8,8 @@ const traverse = require("@babel/traverse").default;
  * Breadcrumbs help users understand where they are in the application.
  */
 function detectBreadcrumbs(content) {
-  const pageComponents = ["Page", "Layout", "Main", "page", "layout", "main"];
-  const breadcrumbComponents = ["Breadcrumb", "BreadCrumb", "Breadcrumbs", "BreadCrumbs"];
+  const pageComponents = ["page", "layout", "main"];
+  const breadcrumbComponents = ["breadcrumb", "breadcrumbs"];
   const htmlBreadcrumbPatterns = [
     /aria-label\s*=\s*["']breadcrumb["']/i,
     /class(Name)?\s*=\s*["'][^"']*breadcrumb-list[^"']*["']/i
@@ -31,7 +31,7 @@ function detectBreadcrumbs(content) {
     // JSX Component check
     if (node.type === "JSXElement") {
       const name = node.openingElement.name;
-      if (name.type === "JSXIdentifier" && breadcrumbComponents.includes(name.name)) {
+      if (name.type === "JSXIdentifier" && breadcrumbComponents.includes(name.name.toLowerCase())) {
         return true;
       }
 
@@ -58,7 +58,7 @@ function detectBreadcrumbs(content) {
   traverse(ast, {
     JSXElement(path) {
       const name = path.node.openingElement.name;
-      if (name.type === "JSXIdentifier" && pageComponents.includes(name.name)) {
+      if (name.type === "JSXIdentifier" && pageComponents.includes(name.name.toLowerCase())) {
         if (!hasBreadcrumb(path.node)) {
           feedback.push({
             type: "missing-breadcrumb",
