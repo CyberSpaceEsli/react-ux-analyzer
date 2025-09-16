@@ -2,9 +2,8 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 
 /**
- * Detects shortcut-related best practices in UI:
- * - Keyboard listeners (`document.addEventListener('keydown', ...)`)
- * - Visible shortcut hints in menus/nav (e.g., "Ctrl+S")
+ * detectShortcuts - checks React code for keyboard shortcut implementation
+ * Based on Nielsen Heuristic #7: Flexibility & Efficiency of Use
  */
 function detectShortcuts(content) {
   const feedback = [];

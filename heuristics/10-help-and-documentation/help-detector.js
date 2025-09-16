@@ -1,0 +1,264 @@
+const { parse } = require("@babel/parser");
+const traverse = require("@babel/traverse").default;
+
+function detectHelpFeatures(content) {
+  const feedback = [];
+
+  const onboardingTextRegex = /\b(welcome|tour|guide|get started|walkthrough|intro|help)\b/i;
+  const onboardingButtonRegex = /\b(start|begin|show me|give tour|next|continue)\b/i;
+  const helpLinkRegex = /\b(help|docs|support|faq|guide|get started|q&a)\b/i;
+  const modalLikeTags = ["modal", "dialog", "popover", "tooltip"];
+  const criticalInputTypes = [
+        "email", "password", "file", "number",
+        "date", "time", "url", "tel",
+      ];
+  const iconButtons = ['IconButton', 'button'];
+  const iconTags = /icon|svg/i;
+  const tooltipTags = ["Tooltip", "Hint", "Help", "Info"];
+
+      // helper to collect all text from JSX children
+      function collectJSXText(node) {
+      let text = '';
+      if (node.type === 'JSXText') text += node.value;
+      if (node.type === 'JSXElement' && node.children) {
+        for (const child of node.children) text += collectJSXText(child);
+      }
+      return text;
+    }
+
+    // helper to check if an action button exists in onboarding modals
+    function hasActionButton(node) {
+      if (node.type === "JSXElement") {
+        const childName = node.openingElement?.name;
+        if (childName?.type === "JSXIdentifier") {
+          const childTag = childName.name.toLowerCase();
+          if (["button", "a"].includes(childTag)) {
+            const buttonText = node.children
+              ?.filter((c) => c?.type === "JSXText")
+              .map((t) => t.value.toLowerCase())
+              .join(" ");
+            if (onboardingButtonRegex.test(buttonText)) return true;
+          }
+        }
+        // Recursively check children
+        if (node.children) {
+          for (const child of node.children) {
+            if (hasActionButton(child)) return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    // helper to check if a child is an icon element
+    function isIconElement(child) {
+    if (child.type !== "JSXElement") return false;
+    const name = child.openingElement.name;
+    if (name.type === "JSXIdentifier" && iconTags.test(name.name)) return true;
+
+    // Check for className containing "icon"
+    const attrs = child.openingElement.attributes || [];
+    for (const attr of attrs) {
+      if (attr.type === "JSXAttribute" && attr.name.name === "className" && attr.value?.type === "StringLiteral") {
+        if (iconTags.test(attr.value.value)) return true;
+      }
+    }
+    return false;
+  }
+
+  // helper to check if a button is icon-only
+  function isIconOnlyButton(node) {
+    if (node.type !== "JSXElement") return false;
+    const name = node.openingElement.name;
+    if (name.type !== "JSXIdentifier") return false;
+    const tag = name.name;
+
+    if (!iconButtons.includes(tag)) return false;
+
+    const children = node.children || [];
+    const hasText = children.some(child => child.type === "JSXText" && child.value.trim());
+    if (hasText) return false;
+
+    // Use regex/className matching for icon children
+    const hasIconChild = children.some(isIconElement);
+
+    return hasIconChild && !hasText;
+  }
+
+  // helper to check if a node has accessible label attributes
+  function hasTitleAccessibleLabel(node) {
+    // Check for aria-label or title attribute
+    const attrs = node.openingElement.attributes || [];
+    for (const attr of attrs) {
+      if (attr.type !== "JSXAttribute" || !attr.name) continue;
+      const attrName = attr.name.name;
+      if (["aria-label", "title"].includes(attrName)) {
+        // Must have a value
+        if (attr.value && ((attr.value.type === "StringLiteral" && attr.value.value.trim()) ||
+            (attr.value.type === "JSXExpressionContainer"))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // helper to check if a node is wrapped in a Tooltip component
+  function isWrappedInTooltip(path) {
+    let parent = path.parentPath;
+    while (parent) {
+      if (parent.node.type === "JSXElement") {
+        const parentName = parent.node.openingElement.name;
+        if (parentName.type === "JSXIdentifier" && tooltipTags.includes(parentName.name)) {
+          return true;
+        }
+      }
+      parent = parent.parentPath;
+    }
+    return false;
+  }
+
+  let ast;
+  try {
+    ast = parse(content, {
+      sourceType: "module",
+      plugins: ["jsx"],
+      errorRecovery: true,
+    });
+  } catch (err) {
+    console.error("AST Parse error:", err.message);
+    throw new Error("Could not parse JSX content: " + err.message);
+  }
+
+  traverse(ast, {
+    JSXElement(path) {
+      const el = path.node;
+      const opening = path.node.openingElement;
+      const openingElement = el.openingElement;
+      if (!openingElement || openingElement.type !== "JSXOpeningElement") return;
+
+      // Get tag name e.g. 'div', 'Modal', 'button'
+      const nameNode = openingElement.name;
+      const tag = nameNode?.type === "JSXIdentifier" ? nameNode.name.toLowerCase() : null;
+      if (!tag) return;
+
+      // Extract inner text content of JSX children for modal/dialog
+      const children = Array.isArray(el.children) ? el.children : [];
+     
+      const line = el.loc?.start?.line ?? null;
+
+      // 1. MODALS / DIALOGS — onboarding content but no start button
+      const isModalComponent = modalLikeTags.includes(tag);
+
+      if (isModalComponent) {
+      const innerText = collectJSXText(el);
+      if (onboardingTextRegex.test(innerText)) {
+        const hasAction = hasActionButton(el);
+        if (!hasAction) {
+          feedback.push({
+            type: "missing-onboarding-action",
+            line,
+            message: `<${tag}> contains onboarding content but lacks an action button`,
+            severity: "warning",
+            why: "Users need guidance to proceed with onboarding.",
+            action: `Add a button or link with text like "Start", "Begin", or "Show Me".`,
+          });
+        }
+      }
+    }
+
+      // 2. NAV / MENU — should include help/support links
+      if (["nav", "menu"].includes(tag)) {
+        const hasHelpLink = children.some((child) => {
+          if (child?.type !== "JSXElement") return false;
+          let linkTag = "";
+            if (
+            child?.type === "JSXElement" &&
+            child.openingElement?.name?.type === "JSXIdentifier"
+            ) {
+            linkTag = child.openingElement.name.name.toLowerCase();
+            }
+            if (!["a", "link"].includes(linkTag)) return false;
+
+          return child.children?.some(
+            (c) => c?.type === "JSXText" && helpLinkRegex.test(c.value)
+          );
+        });
+
+        // If no help/support link is found in nav/menu
+        if (!hasHelpLink) {
+          feedback.push({
+            type: "missing-help-link-in-menu",
+            line,
+            message: `Navigation block does not contain a link to Help, Support, or Documentation.`,
+            severity: "warning",
+            why: "Users need help resources from navigation.",
+            action: `Add a link with text like "Help", "Support", or "Docs" in the <${tag}>.`,
+          });
+        }
+      }
+
+      // 3. INPUT / TEXTAREA / SELECT / BUTTON are missing help attributes (title, aria-label, data-tooltip)
+      const attrs = Array.isArray(opening.attributes)
+        ? opening.attributes
+        : [];
+
+      if (["input", "textarea", "select", "button"].includes(tag)) {
+        // Extract type="..." attribute if present
+        const typeAttr = attrs.find(
+          (attr) =>
+            attr?.type === "JSXAttribute" &&
+            attr.name?.name === "type" &&
+            attr.value?.type === "StringLiteral"
+        );
+        const inputType = typeAttr?.type === "JSXAttribute" && typeAttr?.value?.type === "StringLiteral" ? typeAttr?.value?.value : null;
+
+        const needsHelp =
+          tag === "textarea" ||
+          tag === "select" ||
+          (tag === "input" && criticalInputTypes.includes(inputType)) ||
+          (tag === "button" && /submit|upload|confirm|send/i.test(path.node.type === "JSXElement" && path.node?.children?.[0]?.type === "JSXText" && path.node.children?.[0]?.value || ""));
+
+        if (!needsHelp) return;
+
+        // Check for help attributes
+        const hasHelpAttr = attrs.some(
+          (attr) =>
+            attr?.type === "JSXAttribute" &&
+            attr.name?.type === "JSXIdentifier" &&
+            ["title", "aria-label", "data-tooltip"].includes(attr.name.name)
+        );
+
+        if (!hasHelpAttr) {
+          feedback.push({
+            type: "missing-tooltip",
+            line: path.node.loc?.start?.line ?? null,
+            message: `<${tag}> field of type '${inputType ?? "text"}' is missing help attributes.`,
+            severity: "warning",
+            why: "Users may need guidance on how to fill out critical form fields.",
+            action: `Add a 'title', 'aria-label', or 'data-tooltip' attribute to the <${tag}>.`,
+          });
+        }
+      }
+
+      // 4. ICON-ONLY BUTTONS — must have aria-label/title or be wrapped in Tooltip
+      if (isIconOnlyButton(el)) {
+      const line = el.loc?.start?.line || null;
+      if (!hasTitleAccessibleLabel(el) && !isWrappedInTooltip(path)) {
+        feedback.push({
+          type: "missing-icon-button-label",
+          line,
+          message: `Icon-only button lacks accessible label or tooltip.`,
+          severity: "warning",
+          why: "Icon buttons need accessible labels for users and screen readers.",
+          action: `Add 'aria-label' or 'title' attribute, or wrap the <${tag}> in a <Tooltip> component.`,
+        });
+      }
+    }
+    },
+  });
+
+  return feedback;
+}
+
+module.exports = { detectHelpFeatures };

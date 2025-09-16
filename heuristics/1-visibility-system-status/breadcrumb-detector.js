@@ -8,7 +8,7 @@ const traverse = require("@babel/traverse").default;
  * Breadcrumbs help users understand where they are in the application.
  */
 function detectBreadcrumbs(content) {
-  const pageComponents = ["Page", "Layout", "Main"];
+  const pageComponents = ["Page", "Layout", "Main", "page", "layout", "main"];
   const breadcrumbComponents = ["Breadcrumb", "BreadCrumb", "Breadcrumbs", "BreadCrumbs"];
   const htmlBreadcrumbPatterns = [
     /aria-label\s*=\s*["']breadcrumb["']/i,

@@ -4,7 +4,7 @@
  * - Project-wide usability scan for JSX files in `src`
  */
 const vscode = require('vscode');
-const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, detectShortcuts, FeedbackHandler } = require('./heuristics');
+const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, detectShortcuts, detectHelpFeatures, FeedbackHandler } = require('./heuristics');
 
 async function usabilityAnalyzeReactFiles() {
   const feedbackHandler = new FeedbackHandler();
@@ -59,11 +59,21 @@ async function usabilityAnalyzeReactFiles() {
       );
     }
 
+    // --- Shortcuts detector ---
     const  shortcutIssues = detectShortcuts(content);
     if (shortcutIssues.length > 0) {
       feedbackHandler.showResults(
         fileName,
         shortcutIssues.map(issue => ({ ...issue, analysisType: 'FLEXIBILITY & EFFICIENCY' }))
+      );
+    }
+
+    // --- Help Features detector ---
+    const helpIssues = detectHelpFeatures(content);
+    if (helpIssues.length > 0) {
+      feedbackHandler.showResults(
+        fileName,
+        helpIssues.map(issue => ({ ...issue, analysisType: 'HELP' }))
       );
     }
 
@@ -208,6 +218,31 @@ function activate(context) {
     }
   });
 
+  //Command: Analyze Help Features
+  const analyzeHelpCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeHelp', () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
+
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
+
+    try {
+      const issues = detectHelpFeatures(content);
+
+      feedbackHandler.showResults(fileName, issues.map(issue => ({
+        ...issue,
+        analysisType: 'HELP'
+      })));
+    } catch (err) {
+      console.error(`Error running Help Features detector on ${fileName}:`, err);
+      vscode.window.showErrorMessage(`Help Features analysis failed: ${err.message}`);
+    }
+  });
+
   // Project-wide command: Analyze all React files in src folder
   const analyzeProjectCommand = vscode.commands.registerCommand('react-ux-analyzer.usabilityAnalyzeReactFiles', usabilityAnalyzeReactFiles);
 
@@ -218,6 +253,7 @@ function activate(context) {
   context.subscriptions.push(analyzeProjectCommand);
   context.subscriptions.push(analyzePageConsistencyCommand);
   context.subscriptions.push(analyzeShortcutsCommand);
+  context.subscriptions.push(analyzeHelpCommand);
 
   console.log('✅ React UX Analyzer commands registered!');
 }

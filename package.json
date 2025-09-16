@@ -44,6 +44,11 @@
         "command": "react-ux-analyzer.analyzeShortcuts",
         "title": "Analyze Shortcuts (Nielsen #7: Flexibility & Efficiency of Use)",
         "category": "React UX Analyzer"
+      },
+      {
+        "command": "react-ux-analyzer.analyzeHelp",
+        "title": "Analyze Help Features (Nielsen #10: Help & Documentation)",
+        "category": "React UX Analyzer"
       }
     ],
     "menus": {
