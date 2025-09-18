@@ -67,7 +67,7 @@ function test_breadcrumb_detector() {
     console.log('\n=== Testing BreadcrumbDetector ===');
     
     try {
-        const BreadcrumbDetector = require('../heuristics/1-visibility-system-status/breadcrumb-detector');
+        const BreadcrumbDetector = require('../src/heuristics/1-visibility-system-status/breadcrumb-detector');
         
         // Test 1: Create fresh instance
         console.log('✓ BreadcrumbDetector instance created');
@@ -97,7 +97,7 @@ function test_loading_detector() {
     console.log('\n=== Testing LoadingDetector ===');
     
     try {
-        const LoadingDetector = require('../heuristics/1-visibility-system-status/loading-detector');
+        const LoadingDetector = require('../src/heuristics/1-visibility-system-status/loading-detector');
         
         // Test 1: Create fresh instance
         console.log('✓ LoadingDetector instance created');
@@ -127,7 +127,7 @@ function test_control_exit_detector() {
     console.log('\n=== Testing ControlExitDetector ===');
     
     try {
-        const ControlExitDetector = require('../heuristics/3-user-control-freedom/control-exit-detector');
+        const ControlExitDetector = require('../src/heuristics/3-user-control-freedom/control-exit-detector');
         
         // Test 1: Create fresh instance
         console.log('✓ ControlExitDetector instance created');
@@ -157,9 +157,9 @@ function test_detector_state_isolation() {
     console.log('\n=== Testing Detector State Isolation ===');
     
     try {
-        const BreadcrumbDetector = require('../heuristics/1-visibility-system-status/breadcrumb-detector');
-        const LoadingDetector = require('../heuristics/1-visibility-system-status/loading-detector');
-        const ControlExitDetector = require('../heuristics/3-user-control-freedom/control-exit-detector');
+        const BreadcrumbDetector = require('../src/heuristics/1-visibility-system-status/breadcrumb-detector');
+        const LoadingDetector = require('../src/heuristics/1-visibility-system-status/loading-detector');
+        const ControlExitDetector = require('../src/heuristics/3-user-control-freedom/control-exit-detector');
         
         
         // Run all detectors on same content multiple times

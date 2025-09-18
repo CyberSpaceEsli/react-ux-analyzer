@@ -4,7 +4,7 @@
  * - Project-wide usability scan for JSX files in `src`
  */
 const vscode = require('vscode');
-const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, detectErrorPrevention, detectRecognitionCues, detectShortcuts, detectHelpErrorRecognition, detectHelpFeatures, FeedbackHandler } = require('./heuristics');
+const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, detectErrorPrevention, detectRecognitionCues, detectShortcuts, detectHelpErrorRecognition, detectHelpFeatures, FeedbackHandler } = require('./src/heuristics');
 
 async function usabilityAnalyzeReactFiles() {
   const feedbackHandler = new FeedbackHandler();

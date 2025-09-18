@@ -1,7 +1,7 @@
 // Debug test script for breadcrumb, loading and modal detectors
 const fs = require('fs');
-const BreadcrumbDetector = require('./heuristics/1-visibility-system-status/breadcrumb-detector');
-const LoadingDetector = require('./heuristics/1-visibility-system-status/loading-detector');
+const BreadcrumbDetector = require('./src/heuristics/1-visibility-system-status/breadcrumb-detector');
+const LoadingDetector = require('./src/heuristics/1-visibility-system-status/loading-detector');
 
 function runDebugTests() {
   console.log('🔍 RUNNING BREADCRUMB, LOADING & FEEDBACK TESTS');
