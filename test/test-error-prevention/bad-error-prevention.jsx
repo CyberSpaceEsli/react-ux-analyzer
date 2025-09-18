@@ -63,6 +63,35 @@ function BadRadioGroupExample() {
   );
 }
 
+// X BAD: no catch block at fetch or axios call
+function FetchWithoutErrorHandling() {
+    React.useEffect(() => {
+        fetch('/api/users')
+        .then(res => res.json());
+    }, []);
+}
+
+// X BAD: Error inside catch is not user-friendly but dev-only
+function FetchWithDevOnlyError() {
+    React.useEffect(() => {
+        fetch('/api/data')
+        .then(res => res.json())
+        .catch(err => {
+            console.log('Fetch error:', err); // ❌ Only logs error, no user feedback
+            //<ErrorBoundary feedback={'Test'}/>
+        });
+    }, []);
+}
+
+// X BAD: Alert instead of user-friendly error message
+function FetchError() {
+    try {
+    fetch("/data");
+    } catch (error) {
+    console.log(error);
+    }
+}
+
 // Mock component
 function Dialog({ children }) {
   return <div className="dialog">{children}</div>;
@@ -72,9 +101,16 @@ function RadioGroup({name, children }) {
   return <div>{children}</div>;
 }
 
+function ErrorBoundary({ feedback }) {
+  return <div className="error-boundary">{feedback}</div>;
+}
+
 export {
   DeleteButtonNoConfirm,
   ConfirmDialogWithoutCancel,
   SelectWithoutHelp,
-  BadRadioGroupExample
+  BadRadioGroupExample,
+  FetchWithoutErrorHandling,
+  FetchWithDevOnlyError,
+  FetchError,
 };

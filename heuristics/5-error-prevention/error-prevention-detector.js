@@ -14,6 +14,7 @@ function detectErrorPrevention(content) {
   const undoWords = /\b(undo|restore|revert|recover|unarchive|undelete|cancel)\b/i;
   const modalLikeTags = ["modal", "dialog", "confirmdialog", "alertdialog"];
   const contextualFields = ["select", "dropdown", "checkboxgroup", "radiogroup", "upload", "filepicker"];
+  const userErrorFeedback = /(set|show|get)?(Error|Toast|Alert|Message|Snackbar)/i;
 
   // helper to extract text from JSX nodes
   function getTextFromJSX(node) {
@@ -40,6 +41,129 @@ function detectErrorPrevention(content) {
         return false;
     });
     }
+
+    // helper determines if a node is a fetch or axios call
+    function isNetworkCall(node) {
+    if (!node || node.type !== "CallExpression") return false;
+
+    const callee = node.callee;
+
+    // fetch(...)
+    if (callee.type === "Identifier" && callee.name === "fetch") return true;
+
+    // axios.get/post/put/delete(...)
+    if (
+        callee.type === "MemberExpression" &&
+        callee.object?.name === "axios" &&
+        ["get", "post", "put", "delete"].includes(callee.property?.name)
+    ) {
+        return true;
+    }
+
+    return false;
+    }
+
+    // helper checks if node is inside a try-catch
+    function isInsideTryCatch(path) {
+    return path.findParent(p => 
+        p &&
+        typeof p === "object" &&
+        //checks for try parent
+        p.isTryStatement());
+    }
+
+    // helper to detects if a path is followed by a `.catch(...)`
+    function findCatchHandler(path) {
+    let current = path;
+
+    while (current) {
+        const node = current.node;
+
+        // Looks for: .catch(...)
+        if (
+        node?.type === "CallExpression" &&
+        node.callee?.type === "MemberExpression" &&
+        node.callee.property?.type === "Identifier" &&
+        node.callee.property.name === "catch"
+        ) {
+        return current;
+        }
+
+        current = current.parentPath;
+    }
+
+    return null;
+    }
+
+    // helper determines if the code block only contains dev feedback (console.log/error)
+    function isDevOnlyFeedback(node) {
+    if (!node || node.type !== "ExpressionStatement") return false;
+
+    const expr = node.expression;
+    if (!expr || expr.type !== "CallExpression") return false;
+
+    const callee = expr.callee;
+
+    if (
+        callee?.type === "MemberExpression" &&
+        callee.object?.type === "Identifier" &&
+        callee.object.name === "console" &&
+        callee.property?.type === "Identifier"
+    ) {
+        //only detects console.log, not console.error?!
+        return callee.property.name === "log" || callee.property.name === "error"
+    }
+
+    return false;
+    }
+
+    // helper checks if the code has meaningful user-facing feedback
+    function isUserFeedback(node) {
+    if (!node) return false;
+
+    // Statement like setError("...") or showToast(...)
+    if (
+        node.type === "ExpressionStatement" &&
+        node.expression?.type === "CallExpression"
+    ) {
+        const callee = node.expression.callee;
+
+        if (callee.type === "Identifier" && userErrorFeedback.test(callee.name)) {
+        return true;
+        }
+
+        if (callee.type === "MemberExpression" && userErrorFeedback.test(callee.property?.name)) {
+        return true;
+        }
+    }
+
+    // JSX return like: return <Error />
+    if (
+        node.type === "ReturnStatement" &&
+        node.argument?.type === "JSXElement"
+    ) {
+        const tag = node.argument.openingElement?.name?.name;
+        return /error|toast|errormessage|errorboundary|alert|message/i.test(tag.toLowerCase());
+    }
+
+    return false;
+    }
+
+    // helper extracts feedback for catch blocks or .catch handlers
+    function analyzeErrorHandlerCatchStatements(statements, line, feedback) {
+    const onlyDevLogs = statements.length > 0 && statements.every(isDevOnlyFeedback);
+    const hasUserFeedback = statements.some(isUserFeedback);
+
+    if (onlyDevLogs && !hasUserFeedback) {
+        feedback.push({
+        type: "dev-only-error-handling",
+        line,
+        message: `Error handler contains only console logs. Consider displaying user feedback (e.g. setError, <Error />).`,
+        severity: "warning",
+        });
+    }
+    }
+
 
   let ast;
   try {
@@ -126,7 +250,86 @@ function detectErrorPrevention(content) {
       }
 
     },
+    
+    // 3. Detect fetch/axios calls without proper error handling
+    CallExpression(path) {
+    const node = path.node;
+    if (!isNetworkCall(node)) return;
+
+    const line = node.loc?.start?.line ?? null;
+    const feedbackLine = line || path.node.start;
+
+    const insideTry = isInsideTryCatch(path);
+    const catchPath = findCatchHandler(path);
+
+    if (!insideTry && !catchPath) {
+        feedback.push({
+        type: "network-missing-catch",
+        line: feedbackLine,
+        message: `AJAX call (fetch/axios) is missing error handling (e.g., .catch or try/catch).`,
+        severity: "warning",
+        });
+        return;
+    }
+
+    // Analyze .catch(fn) if present
+    if (catchPath?.node?.arguments?.length > 0) {
+        const handler = catchPath.node.arguments[0];
+
+        if (
+        handler.type === "ArrowFunctionExpression" ||
+        handler.type === "FunctionExpression"
+        ) {
+        if (handler.body.type === "BlockStatement") {
+            const statements = handler.body.body;
+            analyzeErrorHandlerCatchStatements(statements, handler.loc?.start?.line, feedback);
+        } else {
+            // One-liner: e => console.log(e)
+            analyzeErrorHandlerCatchStatements(
+            [{ type: "ExpressionStatement", expression: handler.body }],
+            handler.loc?.start?.line,
+            feedback
+            );
+        }
+        }
+    }
+    },
+
+    // Analyze try-catch blocks for dev-only error handling
+    CatchClause(path) {
+    const catchBody = path.node.body?.body ?? [];
+    const line = path.node.loc?.start?.line ?? null;
+
+    const onlyDevLogs = catchBody.length > 0 && catchBody.every(isDevOnlyFeedback);
+    const hasUserFeedback = catchBody.some(isUserFeedback);
+
+    if (onlyDevLogs && !hasUserFeedback) {
+        feedback.push({
+        type: "dev-only-error-handling",
+        line,
+        message: `Catch block only logs errors using console.log or console.error. Consider providing user-facing feedback.`,
+        severity: "warning",
+        });
+    }
+    },
+
+    // Warn if try block is missing a catch handler
+    TryStatement(path) {
+    const node = path.node;
+    const hasCatch = Boolean(node.handler);
+    const line = node.loc?.start?.line;
+
+    if (!hasCatch) {
+        feedback.push({
+        type: "missing-catch-in-try",
+        line,
+        message: `Try block is missing a catch handler. Errors inside may go unhandled.`,
+        severity: "warning",
+        });
+    }
+    }
     });
+
 
   return feedback;
 }

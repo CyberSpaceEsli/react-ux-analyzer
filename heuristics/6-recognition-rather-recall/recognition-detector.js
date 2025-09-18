@@ -23,7 +23,7 @@ function detectRecognitionCues(content) {
       : "";
 
     // Count a, li, button as menu items
-    if (["a", "button", "link"].includes(tag)) {
+    if (["a", "button", "link", "route"].includes(tag)) {
       count++;
     }
 
@@ -91,7 +91,7 @@ function detectRecognitionCues(content) {
       }
 
       // 2. nav/menu overloaded
-      if (["nav", "menu"].includes(tag)) {
+      if (["nav", "menu", "routes"].includes(tag)) {
         // Counts how many direct child elements inside are also <nav> or <menu>
         const itemCount = countMenuItemsRecursively(children);
 
