@@ -15,7 +15,8 @@ class FeedbackHandler {
    * @param {Array} issues - array of issue objects with {line, type, severity, content, message, analysisType}
    */
   showResults(filePath, issues) {
-    this.clear(filePath);
+    this.diagnostics.clear(); // clear all previous diagnostics
+    this.clear(filePath); // clear diagnostics for the file
 
     const diagnostics = issues.map(issue => {
       const range = new vscode.Range(issue.line - 1, 0, issue.line - 1, 1000);
