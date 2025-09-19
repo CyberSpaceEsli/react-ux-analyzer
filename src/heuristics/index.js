@@ -7,6 +7,7 @@
 
 const { detectBreadcrumbs } = require('./1-visibility-system-status/breadcrumb-detector');
 const { detectLoadingPatterns } = require('./1-visibility-system-status/loading-detector');
+const {detectMatchSystemwithRealWorld} = require ('./2-match-system-with-real-world/match-system-world-detector');
 const { detectControlExits } = require('./3-user-control-freedom/control-exit-detector');
 const { detectPageConsistency } = require('./4-consistency-and-standards/page-consistency-detector');
 const { detectErrorPrevention } = require('./5-error-prevention/error-prevention-detector');
@@ -21,6 +22,7 @@ module.exports = {
   // Function-based detector
   detectBreadcrumbs,
   detectLoadingPatterns,
+  detectMatchSystemwithRealWorld,
   detectControlExits,
   detectPageConsistency,
   detectErrorPrevention,

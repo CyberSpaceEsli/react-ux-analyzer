@@ -11,7 +11,10 @@
 			"request": "launch",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}"
-			]
+			],
+			"env": {
+			 "OPENROUTER_API_KEY": "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"
+		    }
 		}
 	]
 }

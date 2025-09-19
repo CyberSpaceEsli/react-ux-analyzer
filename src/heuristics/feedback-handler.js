@@ -19,7 +19,7 @@ class FeedbackHandler {
     this.clear(filePath); // clear diagnostics for the file
 
     const diagnostics = issues.map(issue => {
-      const range = new vscode.Range(issue.line - 1, 0, issue.line - 1, 1000);
+      const range = new vscode.Range(issue.line - 1, 0, issue.line - 1, 1000); // line range (0-1000 chars)
       const diagnostic = new vscode.Diagnostic(
         range,
         this._formatMessage(issue),
@@ -79,10 +79,14 @@ class FeedbackHandler {
   return `${problem}\nAction: ${action}\nWhy: ${why}\nHeuristic: ${heuristic} (${heuristicCode})\nMore info: ${docLink}`;
   }
 
+  /**
+   * Heuristic Overview of their labels assigned to analysis types
+   */
   _getHeuristicName(analysisType) {
     const heuristics = {
       'BREADCRUMB': 'Nielsen #1: Visibility of System Status',
       'LOADING': 'Nielsen #1: Visibility of System Status',
+      'MATCH_SYSTEM_REAL_WORLD': 'Nielsen #2: Match Between System and the Real World',
       'CONTROL': 'Nielsen #3: User Control and Freedom',
       'CONSISTENCY': 'Nielsen #4: Consistency and Standards',
       'ERROR_PREVENTION': 'Nielsen #5: Error Prevention',
@@ -94,10 +98,14 @@ class FeedbackHandler {
     return heuristics[analysisType] || 'Nielsen Heuristic';
   }
 
+  /**
+   * Heuristic Codes for quick reference
+   */
   _getHeuristicCode(analysisType) {
     const codes = {
       'BREADCRUMB': 'RUX101',
       'LOADING': 'RUX102',
+      'MATCH_SYSTEM_REAL_WORLD': 'RUX201',
       'CONTROL': 'RUX301',
       'CONSISTENCY': 'RUX401',
       'ERROR_PREVENTION': 'RUX501',
@@ -109,10 +117,14 @@ class FeedbackHandler {
     return codes[analysisType] || 'RUX000';
   }
 
+  /**
+   * Heuristic Learning Material Links
+   */
   _getDocumentationLink(analysisType) {
     const links = {
       'BREADCRUMB': 'https://www.nngroup.com/articles/breadcrumbs/',
       'LOADING': 'https://medium.com/design-bootcamp/using-loaders-understanding-their-purpose-types-and-best-practices-a62ca991d472',
+      'MATCH_SYSTEM_REAL_WORLD': 'https://www.nngroup.com/articles/match-between-system-and-the-real-world/',
       'CONTROL': 'https://www.nngroup.com/articles/user-control-and-freedom/',
       'CONSISTENCY': 'https://www.nngroup.com/articles/consistency-and-standards/',
       'ERROR_PREVENTION': 'https://www.nngroup.com/articles/error-prevention/',

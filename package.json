@@ -31,6 +31,11 @@
         "category": "React UX Analyzer"
       },
       {
+        "command": "react-ux-analyzer.analyzeMatchSystem",
+        "title": "Analyze Match System with Real World (Nielsen #2: Match Between System & Real World)",
+        "category": "React UX Analyzer"
+      },
+      {
         "command": "react-ux-analyzer.analyzeControlExits",
         "title": "Analyze Control Exits (Nielsen #3: User Control & Freedom)",
         "category": "React UX Analyzer"
@@ -101,6 +106,8 @@
   "dependencies": {
     "@babel/parser": "^7.28.4",
     "@babel/traverse": "^7.28.4",
+    "dotenv": "^17.2.2",
+    "node-fetch": "^3.3.2",
     "react": "^18.0.0"
   },
   "devDependencies": {
