@@ -4,15 +4,17 @@
  * - Project-wide usability scan for JSX files in `src`
  */
 const vscode = require('vscode');
+const http = require('http');
 const { detectBreadcrumbs, detectLoadingPatterns, detectMatchSystemwithRealWorld, detectControlExits, detectPageConsistency, detectErrorPrevention, detectRecognitionCues, detectShortcuts, detectHelpErrorRecognition, detectHelpFeatures, FeedbackHandler } = require('./src/heuristics');
 const { detectBusinessDomain } = require('./src/heuristics/2-match-system-with-real-world/languageAnalyzer.js');
 const { extractVisibleTextFromCode } = require('./src/heuristics/utils/extractVisibleText');
+const { runVisualQualityCheck } = require('./src/visual-quality-analysis');
 
 async function usabilityAnalyzeReactFiles() {
   const feedbackHandler = new FeedbackHandler();
 
-  // Only scan src folder for JS/TS/JSX/TSX files
-  const files = await vscode.workspace.findFiles('src/**/*.{jsx}');
+  // Only scan src folder for JSX/TSX files
+  const files = await vscode.workspace.findFiles('src/**/*.{jsx, tsx}');
 
   if (files.length === 0) {
     vscode.window.showInformationMessage('No React source files found in the src folder.');
@@ -437,6 +439,84 @@ function activate(context) {
       vscode.window.showErrorMessage(`Help Features analysis failed: ${err.message}`);
     }
   });
+
+  /**
+   * Checks if the local dev server is running
+   * @param {string} url
+   * @returns {Promise<boolean>}
+   */
+  function isServerRunning(url) {
+    return new Promise((resolve) => {
+      try {
+        const { hostname, port, pathname } = new URL(url);
+        const options = {
+          method: 'GET',
+          hostname,
+          port,
+          path: pathname || '/',
+          timeout: 2000,
+        };
+
+        const req = http.request(options, (res) => {
+          console.log(`📡 Server responded with status: ${res.statusCode}`);
+          resolve(res.statusCode >= 200 && res.statusCode < 400);
+        });
+
+        req.on('error', (err) => {
+          console.log('❌ Server not reachable:', err);
+          resolve(false);
+        });
+
+        req.on('timeout', () => {
+          console.log('⏱️ Server check timed out.');
+          req.destroy();
+          resolve(false);
+        });
+
+        req.end();
+      } catch (err) {
+        console.error('Error checking server status:', err);
+        resolve(false);
+      }
+    });
+  }
+
+  // Command: Score visual quality with NIMA
+  vscode.commands.registerCommand('react-ux-analyzer.analyzeVisualQuality', async () => {
+    // Check if dev server is running
+    const url = process.env.REACT_APP_URL || 'http://localhost:5173';
+    const isRunning = await isServerRunning(url);
+    console.log('✅ isRunning:', isRunning);
+
+    if (!isRunning) {
+      vscode.window.showErrorMessage(
+        `❌ Cannot run visual analysis — React app not reachable at ${url}. Please start your dev server.`
+      );
+      return;
+    }
+      vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Running Visual Quality Analysis...',
+          cancellable: false,
+        },
+        async () => {
+          try {
+            const { mean, std, error } = await runVisualQualityCheck();
+
+            if (error) {
+              vscode.window.showErrorMessage(`❌ NIMA Error: ${error}`);
+            } else {
+              vscode.window.showInformationMessage(
+                `📊 Visual Quality Score: ${mean.toFixed(2)} (±${std.toFixed(2)})`
+              );
+            }
+          } catch (err) {
+            vscode.window.showErrorMessage(`Unexpected error: ${err.message}`);
+          }
+        }
+      );
+    });
 
   // Project-wide command: Analyze all React files in src folder
   const analyzeProjectCommand = vscode.commands.registerCommand('react-ux-analyzer.usabilityAnalyzeReactFiles', usabilityAnalyzeReactFiles);
