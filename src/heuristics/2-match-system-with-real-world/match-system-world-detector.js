@@ -1,0 +1,44 @@
+const { checkForJargon } = require("./languageAnalyzer.js");
+
+/**
+ * Detects internal or technical jargon in UI text elements.
+ * Heuristic: Nielsen #2 - Match between system and the real world
+ * Jargon can confuse users and hinder usability.
+ */
+
+async function detectMatchSystemwithRealWorld(visibleText, domain = 'general') {
+    const feedback = [];
+    const seenJargon = new Set(); // track actual jargon matches, not whole text lines
+
+    for (const { text, line } of visibleText) {
+        if (typeof text !== 'string') continue;
+        const textLine = text.trim();
+        if (textLine.length < 3) continue;
+
+        try {
+            const result = await checkForJargon(textLine, domain);
+            if (result) {
+                const matches = result.split('\n').filter(Boolean);
+                for (const match of matches) {
+                    if (!seenJargon.has(match)) {
+                        seenJargon.add(match);
+                        feedback.push({
+                            type: 'jargon-detected',
+                            line,
+                            message: match, // e.g. "Jargon detected: Cloud Instance – technical cloud computing term, replace with "Cloud Server"
+                            severity: 'warning',
+                            why: 'Users should understand meaning without needing to look it up.',
+                            action: 'Use plain language that matches users\' mental models, see LLM answer.',
+                        });
+                    }
+                }
+            }
+        } catch (err) {
+            console.error(`❌ Jargon detection failed on line ${line}:`, err.message);
+        }
+    }
+
+    return feedback;
+}
+
+module.exports = { detectMatchSystemwithRealWorld };

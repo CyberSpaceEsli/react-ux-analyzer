@@ -5,7 +5,9 @@
  */
 const vscode = require('vscode');
 const http = require('http');
-const { detectBreadcrumbs, detectLoadingPatterns, detectControlExits, detectPageConsistency, detectErrorPrevention, detectRecognitionCues, detectShortcuts, detectHelpErrorRecognition, detectHelpFeatures, FeedbackHandler } = require('./src/heuristics');
+const { detectBreadcrumbs, detectLoadingPatterns, detectMatchSystemwithRealWorld, detectControlExits, detectPageConsistency, detectErrorPrevention, detectRecognitionCues, detectShortcuts, detectHelpErrorRecognition, detectHelpFeatures, FeedbackHandler } = require('./src/heuristics');
+const { detectBusinessDomain } = require('./src/heuristics/2-match-system-with-real-world/languageAnalyzer.js');
+const { extractVisibleTextFromCode } = require('./src/heuristics/utils/extractVisibleText');
 const { runVisualQualityCheck } = require('./src/visual-quality-analysis');
 
 async function usabilityAnalyzeReactFiles() {
@@ -41,6 +43,15 @@ async function usabilityAnalyzeReactFiles() {
       feedbackHandler.showResults(
         fileName,
         loadingIssues.map(issue => ({ ...issue, analysisType: 'LOADING' }))
+      );
+    }
+
+    // --- Match System with Real World detector ---
+    const matchSystemIssues = await detectMatchSystemwithRealWorld(content);
+    if (matchSystemIssues.length > 0) {
+      feedbackHandler.showResults(
+        fileName,
+        matchSystemIssues.map(issue => ({ ...issue, analysisType: 'MATCH_SYSTEM_REAL_WORLD' }))
       );
     }
     
@@ -171,6 +182,88 @@ function activate(context) {
       vscode.window.showErrorMessage(`Loading analysis failed: ${err.message}`);
     }
   });
+
+  //Command: Analyze Match System with Real World
+  const analyzeMatchSystemCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeMatchSystem', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
+
+    const availableDomains = ['health', 'legal', 'finance', 'e-commerce', 'information technology', 'education'];
+
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
+
+    vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Analyzing jargon...",
+            cancellable: false
+        }, async (progress) => {
+        try {
+            progress.report({ increment: 10, message: "Analyzing current file..." });
+
+            // Find all relevant files in the workspace
+            //const files = await vscode.workspace.findFiles('**/*.{jsx,tsx}');
+            //let combinedText = '';
+
+            // Concatenate text from files for analysis
+           /*for (const file of files) {
+            const code = await vscode.workspace.openTextDocument(file).then(d => d.getText());
+            const visibleText = extractVisibleTextFromCode(code); // only human-readable UI strings
+            combinedText += visibleText + " ";
+          }*/
+            
+            progress.report({ increment: 40, message: "Detecting business domain with AI..." });
+
+            /*const domain = await detectBusinessDomain(content, availableDomains) || 'general';
+            console.log('📤 Sending domain detection prompt...');
+            console.log('⛳ text:', content.substring(0, 300).replace(/\s+/g, ' ') + '...');
+            vscode.window.showInformationMessage(`✅ Domain: '${domain}'`);*/
+
+            const visibleText = extractVisibleTextFromCode(content);
+            const visibleTextAsString = visibleText.map(t => t.text).join(' ').trim();
+            const domain = await detectBusinessDomain(visibleTextAsString, availableDomains);
+            //const debugText = "As a user, I want to track my order using the SKU code provided in the confirmation email. The fulfillment center should update the status regularly.";
+
+            //const domain = await detectBusinessDomain(debugText, availableDomains);
+            console.log('🧠 DEBUG Detected domain from hardcoded input:', domain);
+
+            /*const detectedDomain = await detectBusinessDomain(combinedText, availableDomains);
+            const domain = detectedDomain || 'general';*/
+            
+            progress.report({ increment: 60, message: `Running UI text analysis (${domain})...` });
+
+            // Now run the JSX analyzer with the detected domain
+            const issues = await detectMatchSystemwithRealWorld(visibleText, domain);
+
+            progress.report({ increment: 100, message: "Jargon analysis complete." });
+
+            feedbackHandler.showResults(
+              fileName,
+              issues.map((issue) => ({
+                ...issue,
+                analysisType: 'MATCH_SYSTEM_REAL_WORLD',
+              }))
+            );
+
+            /*if (detectedDomain) {
+            const config = vscode.workspace.getConfiguration('react-ux-analyzer');
+            await config.update('businessField', detectedDomain, vscode.ConfigurationTarget.Workspace);
+            vscode.window.showInformationMessage(`✅ Domain: '${detectedDomain}'`);
+          } else {
+            vscode.window.showWarningMessage('⚠️ Could not determine business domain.');
+          }*/
+        } catch (err) {
+          console.error('Match system error:', err);
+          vscode.window.showErrorMessage('❌ Analysis failed: ' + err.message);
+        }
+      }
+    );
+  });
+
 
   // Command: Analyze Control Exit
   const analyzeControlExitCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeControlExits', () => {
@@ -431,6 +524,7 @@ function activate(context) {
   // Register all commands
   context.subscriptions.push(analyzeBreadcrumbCommand);
   context.subscriptions.push(analyzeLoadingCommand);
+  context.subscriptions.push(analyzeMatchSystemCommand);
   context.subscriptions.push(analyzeControlExitCommand);
   context.subscriptions.push(analyzeProjectCommand);
   context.subscriptions.push(analyzePageConsistencyCommand);
