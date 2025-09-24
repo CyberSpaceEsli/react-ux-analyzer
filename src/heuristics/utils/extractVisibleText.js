@@ -24,11 +24,22 @@ function extractVisibleTextFromCode(code) {
 
   traverse(ast, {
     JSXElement(path) {
-      const text = getTextFromJSX(path.node).trim();
-      const line = path.node.loc?.start?.line;
-      if (text.length >= 3) {
-        collected.push({ text, line });
-      }
+      const node = path.node;
+      const line = node.loc?.start?.line;
+
+      // Only process JSX elements with direct visible text children
+      const directText = node.children
+        .filter(child => child.type === 'JSXText' && child.value.trim().length >= 3)
+        .map(child => {
+          if (child.type === 'JSXText') return child.value.trim();
+          if (child.type === 'JSXElement') return getTextFromJSX(child);
+          return '';
+        }).join(' ');
+
+      if (directText.length === 0) return;
+
+      const text = directText;
+      collected.push({ text, line });
     },
   });
 

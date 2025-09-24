@@ -16,9 +16,14 @@ async function getLLMCompletion(text, maxTokens = 100, temperature = 0.3) {
                 "X-Title": "react-ux-analyzer",           // Optional
             },
             body: JSON.stringify({
-                model: "mistralai/mistral-7b-instruct:free", 
+                model: "x-ai/grok-4-fast:free", 
                 messages: [{ role: "user", content: text }],
                 temperature,
+                reasoning: {
+                    "effort": "high",
+                    "exclude": false,
+                    "enabled": true
+                },
                 max_tokens: maxTokens
             }),
         });
