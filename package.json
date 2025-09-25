@@ -16,6 +16,14 @@
   "main": "./extension.js",
   "contributes": {
     "commands": [
+        {
+        "command": "react-ux-analyzer.setApiKey",
+        "title": "🔑 Set OpenRouter API Key"
+      },
+      {
+        "command": "react-ux-analyzer.clearApiKey",
+        "title": "🗑️ Clear OpenRouter API Key"
+      },
       {
         "command": "react-ux-analyzer.helloWorld",
         "title": "Hello World"

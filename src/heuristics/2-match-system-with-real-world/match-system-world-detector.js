@@ -6,7 +6,7 @@ const { checkForJargon } = require("./languageAnalyzer.js");
  * Jargon can confuse users and hinder usability.
  */
 
-async function detectMatchSystemwithRealWorld(visibleText, domain = 'general') {
+async function detectMatchSystemwithRealWorld(visibleText, apiKey, domain = 'general') {
     const feedback = [];
     const seenJargon = new Set(); // track actual jargon matches, not whole text lines
 
@@ -16,7 +16,7 @@ async function detectMatchSystemwithRealWorld(visibleText, domain = 'general') {
         if (textLine.length < 3) continue;
 
         try {
-            const result = await checkForJargon(textLine, domain);
+            const result = await checkForJargon(textLine, apiKey, domain);
             if (result) {
                 const matches = result.split('\n').filter(Boolean);
                 for (const match of matches) {

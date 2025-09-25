@@ -132,6 +132,29 @@ function activate(context) {
   vscode.window.showInformationMessage('✅ React UX Analyzer loaded!');
 
   const feedbackHandler = new FeedbackHandler();
+  const secretStorage = context.secrets;
+
+  // Command: Set OpenRouter API Key
+  vscode.commands.registerCommand('react-ux-analyzer.setApiKey', async () => {
+    const apiKey = await vscode.window.showInputBox({
+      prompt: 'Enter your OpenRouter API key (sk-...)',
+      ignoreFocusOut: true,
+      password: true,
+    });
+
+    if (apiKey && apiKey.startsWith('sk-')) {
+    await secretStorage.store('openrouterApiKey', apiKey);
+    vscode.window.showInformationMessage('🔐 Your OpenRouter API key has been saved securely!');
+  } else {
+    vscode.window.showErrorMessage('❌ Invalid API key. It must start with "sk-".');
+  }
+  });
+
+  // Command: Clear OpenRouter API Key
+  vscode.commands.registerCommand('react-ux-analyzer.clearApiKey', async () => {
+  await secretStorage.delete('openrouterApiKey');
+  vscode.window.showInformationMessage('🗑️ OpenRouter API key deleted from secret storage.');
+  });
 
   // Command: Analyze Breadcrumb in current file
   const analyzeBreadcrumbCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeBreadcrumbs', () => {
@@ -191,6 +214,13 @@ function activate(context) {
       return;
     }
 
+    const apiKey = await context.secrets.get('openrouterApiKey');
+
+    if (!apiKey) {
+      vscode.window.showErrorMessage('❌ Please set your OpenRouter API key using the command: React UX Analyzer: Set API Key');
+      return;
+    }
+
     const availableDomains = ['health', 'legal', 'finance', 'e-commerce', 'information technology', 'education'];
 
     const document = editor.document;
@@ -225,7 +255,7 @@ function activate(context) {
 
             const visibleText = extractVisibleTextFromCode(content);
             const visibleTextAsString = visibleText.map(t => t.text).join(' ').trim();
-            const domain = await detectBusinessDomain(visibleTextAsString, availableDomains);
+            const domain = await detectBusinessDomain(visibleTextAsString, availableDomains, apiKey);
             //const debugText = "As a user, I want to track my order using the SKU code provided in the confirmation email. The fulfillment center should update the status regularly.";
 
             //const domain = await detectBusinessDomain(debugText, availableDomains);
@@ -237,7 +267,7 @@ function activate(context) {
             progress.report({ increment: 60, message: `Running UI text analysis (${domain})...` });
 
             // Now run the JSX analyzer with the detected domain
-            const issues = await detectMatchSystemwithRealWorld(visibleText, domain);
+            const issues = await detectMatchSystemwithRealWorld(visibleText, domain, apiKey);
 
             progress.report({ increment: 100, message: "Jargon analysis complete." });
 

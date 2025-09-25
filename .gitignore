@@ -1,5 +1,5 @@
 node_modules
-.vscode/launch.json
+.vscode/
 .vscode-test/
 *.vsix
 .env

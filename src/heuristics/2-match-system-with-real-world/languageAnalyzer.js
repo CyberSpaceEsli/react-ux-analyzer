@@ -1,16 +1,15 @@
 // languageAnalyzer.js
-require('dotenv').config();
 
 const analysisCache = new Map();
 
 // ---[ 1. Shared fetch logic to LLaMA-3 via OpenRouter ]---
-async function getLLMCompletion(text, maxTokens = 100, temperature = 0.3) {
+async function getLLMCompletion(text, apiKey, maxTokens = 100, temperature = 0.3) {
     try {
         const fetch = (await import('node-fetch')).default;
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                "Authorization": `Bearer ${apiKey}`,
                 "Content-Type": "application/json",
                 "HTTP-Referer": "https://github.com/CyberSpaceEsli/react-ux-analyzer",  // Optional
                 "X-Title": "react-ux-analyzer",           // Optional
@@ -45,7 +44,7 @@ async function getLLMCompletion(text, maxTokens = 100, temperature = 0.3) {
 }
 
 // ---[ 2. Business Domain Detection ]---
-async function detectBusinessDomain(text, availableDomains = ['health', 'legal', 'finance', 'e-commerce', 'information technology', 'education']) {
+async function detectBusinessDomain(text, availableDomains = ['health', 'legal', 'finance', 'e-commerce', 'information technology', 'education'], apiKey) {
     if (!text || text.trim().length < 100) return null;
 
     const prompt = `
@@ -61,7 +60,7 @@ ${text.substring(0, 3000)}
     `.trim();
 
     try {
-        const response = await getLLMCompletion(prompt, 20, 0.1);
+        const response = await getLLMCompletion(prompt, apiKey, 20, 0.1);
         const domain = response.toLowerCase().replace(/[^a-z\s-]/g, '').trim();
 
         if (availableDomains.includes(domain)) {
@@ -79,7 +78,7 @@ ${text.substring(0, 3000)}
 }
 
 // ---[ 3. Technical/Internal Jargon Detection ]---
-async function checkForJargon(text, businessDomain = 'general') {
+async function checkForJargon(text, businessDomain = 'general', apiKey) {
     if (!text || text.trim().length < 3) return null;
 
     const cacheKey = `${businessDomain}:${text}`;
@@ -170,7 +169,7 @@ Text to analyze:
     `.trim();
 
     try {
-        const result = await getLLMCompletion(prompt, 60, 0.2); //60 tokens for detailed response, 0.2 closely to logic with some creativity
+        const result = await getLLMCompletion(prompt, apiKey, 60, 0.2); //60 tokens for detailed response, 0.2 closely to logic with some creativity
 
         if (result.toLowerCase().startsWith('jargon detected')) {
             analysisCache.set(cacheKey, result);
