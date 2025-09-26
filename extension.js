@@ -1,11 +1,12 @@
 /**
  * React UX Analyzer Extension
+ * - one unified command for all detectors
  * - Separate commands per detector
- * - Project-wide usability scan for JSX files in `src`
+ * - Project-wide usability scan for JSX files
  */
 const vscode = require('vscode');
 const http = require('http');
-const { detectBreadcrumbs, detectLoadingPatterns, detectMatchSystemwithRealWorld, detectControlExits, detectPageConsistency, detectErrorPrevention, detectRecognitionCues, detectShortcuts, detectHelpErrorRecognition, detectHelpFeatures, FeedbackHandler } = require('./src/heuristics');
+const { detectBreadcrumbs, detectLoadingPatterns, detectMatchSystemwithRealWorld, detectControlExits, detectPageConsistency, detectErrorPrevention, detectRecognitionCues, detectShortcuts, detectAestheticMinimalism, detectHelpErrorRecognition, detectHelpFeatures, FeedbackHandler } = require('./src/heuristics');
 const { detectBusinessDomain } = require('./src/heuristics/2-match-system-with-real-world/languageAnalyzer.js');
 const { extractVisibleTextFromCode } = require('./src/heuristics/utils/extractVisibleText');
 const { runVisualQualityCheck } = require('./src/visual-quality-analysis');
@@ -96,6 +97,15 @@ async function usabilityAnalyzeReactFiles() {
       feedbackHandler.showResults(
         fileName,
         shortcutIssues.map(issue => ({ ...issue, analysisType: 'FLEXIBILITY & EFFICIENCY' }))
+      );
+    }
+
+    // --- Aesthetic Minimalism detector ---
+    const aestheticIssues = detectAestheticMinimalism(content);
+    if (aestheticIssues.length > 0) {
+      feedbackHandler.showResults(
+        fileName,
+        aestheticIssues.map(issue => ({ ...issue, analysisType: 'AESTHETIC_MINIMALISM' }))
       );
     }
 
@@ -420,6 +430,31 @@ function activate(context) {
     }
   });
 
+  //Command: Analyze Aesthethics and Minimalistic Layouts
+  const analyzeMinimalismCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeMinimalism', () => {
+   const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
+
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
+
+    try {
+      const issues = detectAestheticMinimalism(content);
+
+      feedbackHandler.showResults(fileName, issues.map(issue => ({
+        ...issue,
+        analysisType: 'AESTHETIC_MINIMALISM'
+      })));
+    } catch (err) {
+      console.error(`Error running Aesthetic Minimalism detector on ${fileName}:`, err);
+      vscode.window.showErrorMessage(`Aesthetic Minimalism analysis failed: ${err.message}`);
+    }
+  });
+
   //Command: Analyze Help Error Recognition
   const analyzeHelpErrorCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeHelpError', () => {
     const editor = vscode.window.activeTextEditor;
@@ -561,6 +596,7 @@ function activate(context) {
   context.subscriptions.push(analyzeErrorPreventionCommand);
   context.subscriptions.push(analyzeRecognitionCommand);
   context.subscriptions.push(analyzeShortcutsCommand);
+  context.subscriptions.push(analyzeMinimalismCommand);
   context.subscriptions.push(analyzeHelpErrorCommand);
   context.subscriptions.push(analyzeHelpCommand);
 

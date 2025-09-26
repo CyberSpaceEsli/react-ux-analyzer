@@ -92,6 +92,7 @@ class FeedbackHandler {
       'ERROR_PREVENTION': 'Nielsen #5: Error Prevention',
       'RECOGNITION': 'Nielsen #6: Recognition Rather Than Recall',
       'FLEXIBILITY & EFFICIENCY': 'Nielsen #7: Flexibility and Efficiency of Use',
+      'AESTHETIC_MINIMALISM': 'Nielsen #8: Aesthetic and Minimalist Design',
       'ERROR_RECOVERY': 'Nielsen #9: Help Users Recognize, Diagnose, and Recover from Errors',
       'HELP': 'Nielsen #10: Help and Documentation'
     };
@@ -111,6 +112,7 @@ class FeedbackHandler {
       'ERROR_PREVENTION': 'RUX501',
       'RECOGNITION': 'RUX601',
       'FLEXIBILITY & EFFICIENCY': 'RUX701',
+      'AESTHETIC_MINIMALISM': 'RUX801',
       'ERROR_RECOVERY': 'RUX901',
       'HELP': 'RUX1001'
     };
@@ -130,6 +132,7 @@ class FeedbackHandler {
       'ERROR_PREVENTION': 'https://www.nngroup.com/articles/error-prevention/',
       'RECOGNITION': 'https://www.nngroup.com/articles/recognition-vs-recall/',
       'FLEXIBILITY & EFFICIENCY': 'https://www.nngroup.com/articles/ui-copy/#toc-guidelines-for-command-shortcuts-3',
+      'AESTHETIC_MINIMALISM': 'https://www.nngroup.com/articles/minimalist-design/',
       'ERROR_RECOVERY': 'https://www.nngroup.com/articles/help-users-recognize-diagnose-and-recover-from-errors/',
       'HELP': 'https://www.nngroup.com/articles/help-and-documentation/'
     };

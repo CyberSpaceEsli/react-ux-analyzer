@@ -69,6 +69,11 @@
         "category": "React UX Analyzer"
       },
       {
+        "command": "react-ux-analyzer.analyzeMinimalism",
+        "title": "Analyze Aesthetic & Minimalist Design (Nielsen #8: Aesthetic & Minimalist Design)",
+        "category": "React UX Analyzer"
+      },
+      {
         "command": "react-ux-analyzer.analyzeHelpError",
         "title": "Analyze Help for Error Recognition (Nielsen #9: Help Users Recognize, Diagnose, and Recover from Errors)",
         "category": "React UX Analyzer"
