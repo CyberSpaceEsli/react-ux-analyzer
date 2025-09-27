@@ -1,6 +1,11 @@
 // aesthetic-minimalistic-detector.js
+require('dotenv').config();
 const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
+const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
+const { drawElementAreas } = require('./draw-element-areas');
 
 /**
  * Detects minimalist aesthetic violations in React JSX code.
@@ -8,7 +13,7 @@ const traverse = require("@babel/traverse").default;
  * - More than 3 primary colors used (tailwind or inline styles)
  * - Clickable vs non-clickable elements sharing the same visual style
  */
-function detectAestheticMinimalism(content) {
+async function detectAestheticMinimalism(content, overrideUrl) {
   const feedback = [];
 
   const colorRegex = /(?:text|bg|border|fill|stroke)-(red|blue|green|yellow|purple|pink|orange|teal|cyan|indigo|amber|lime|emerald|fuchsia|violet|rose|sky|slate|gray|zinc|neutral|stone)-(\d{2,3})/gi;
@@ -68,7 +73,7 @@ function detectAestheticMinimalism(content) {
       if (!tagNode || tagNode.type !== "JSXIdentifier") return;
       const tagName = tagNode.name;
 
-      const line = node.loc?.start?.line ?? null;
+      const line = node.loc?.start?.line ?? 1;
 
       let className = '';
       let styleKey = '';
@@ -135,6 +140,7 @@ function detectAestheticMinimalism(content) {
       if (!styleMap.has(visualKey)) styleMap.set(visualKey, []);
       styleMap.get(visualKey).push({ isClickable, line });
     },
+
   });
 
   const totalColorsUsed = new Set([...tailwindColorSet, ...inlineColorSet]);
@@ -164,6 +170,89 @@ function detectAestheticMinimalism(content) {
         action: 'Highlight clickable elements using distinct visual styles from non-clickable ones.',
       });
     }
+  }
+
+  // DOM-based analysis for whitespace
+  const url = overrideUrl || process.env.REACT_APP_URL || 'http://localhost:3000';
+
+  const utilsDir = path.resolve(__dirname, 'utils');
+  if (!fs.existsSync(utilsDir)) fs.mkdirSync(utilsDir, { recursive: true });
+
+  //const screenshotPath = path.join(utilsDir, screenshotPathVar);
+  const screenshotPath = require('path').join(__dirname, 'utils', 'screenshot.png');
+  const maskPath = path.join(utilsDir, 'mask.json');
+  const debugImagePath = path.join(utilsDir, 'debug-whitespace.png');
+
+  /*const screenshotPath = './screenshot.png';
+  const maskPath = path.resolve('./masks.json');
+  const debugImagePath = path.resolve('./debug-whitespace.png');*/
+
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+
+  await page.goto(url, { waitUntil: 'networkidle2' });
+
+  //eslint-disable-next-line
+  const layoutHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+  await page.setViewport({ width: 1280, height: layoutHeight });
+
+  // 🧠 Analyze DOM layout and whitespace
+  const { boxes, layoutWidth, layoutHeight: measuredHeight } = await page.evaluate(() => {
+    const selectors = [
+      'img', 'video', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'label', 'li', 'p', 'a', 'button', 'span'
+    ];
+    const elements = selectors.flatMap(selector =>
+      //eslint-disable-next-line
+      Array.from(document.querySelectorAll(selector))
+    );
+
+    const rects = elements.map(el => {
+      const rect = el.getBoundingClientRect();
+      return {
+        x: Math.floor(rect.left),
+        //eslint-disable-next-line
+        y: Math.floor(rect.top + window.scrollY),
+        width: Math.floor(rect.width),
+        height: Math.floor(rect.height)
+      };
+    });
+
+    return {
+      boxes: rects,
+      //eslint-disable-next-line
+      layoutWidth: document.documentElement.scrollWidth,
+      //eslint-disable-next-line
+      layoutHeight: document.documentElement.scrollHeight
+    };
+  });
+
+  // 📸 Screenshot after viewport adjustment
+  // @ts-ignore
+  await page.screenshot({ path: screenshotPath });
+  await browser.close();
+
+  // 💾 Save for debug
+  fs.writeFileSync(maskPath, JSON.stringify({ boxes, layoutHeight: measuredHeight }, null, 2));
+  await drawElementAreas(screenshotPath, maskPath, debugImagePath);
+
+  const layoutArea = layoutWidth * measuredHeight;
+  const elementArea = boxes.reduce((sum, box) => {
+    const area = box.width * box.height;
+    return sum + (area > 5 ? area : 0);
+  }, 0);
+
+  const whitespaceRatio = 1 - (elementArea / layoutArea);
+
+  if (whitespaceRatio < 0.99) {
+    feedback.push({
+      type: 'low-whitespace',
+      line: 1,
+      message: `Low whitespace detected in layout: ${(whitespaceRatio * 100).toFixed(1)}%. Layout may feel crowded.`,
+      severity: 'warning',
+      why: 'Adequate whitespace improves readability and user focus by reducing visual clutter.',
+      action: 'Increase spacing around elements to enhance clarity and aesthetics.',
+    });
   }
 
   return feedback;
