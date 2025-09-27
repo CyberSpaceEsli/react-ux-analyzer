@@ -101,7 +101,7 @@ async function usabilityAnalyzeReactFiles() {
     }
 
     // --- Aesthetic Minimalism detector ---
-    const aestheticIssues = detectAestheticMinimalism(content);
+    const aestheticIssues = await detectAestheticMinimalism(content);
     if (aestheticIssues.length > 0) {
       feedbackHandler.showResults(
         fileName,
@@ -431,7 +431,7 @@ function activate(context) {
   });
 
   //Command: Analyze Aesthethics and Minimalistic Layouts
-  const analyzeMinimalismCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeMinimalism', () => {
+  const analyzeMinimalismCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeMinimalism', async () => {
    const editor = vscode.window.activeTextEditor;
     if (!editor) {
       vscode.window.showErrorMessage('❌ Please open a file first!');
@@ -441,18 +441,26 @@ function activate(context) {
     const document = editor.document;
     const content = document.getText();
     const fileName = document.fileName;
+    
+    vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: "Detecting Aesthetic & Minimalism...",
+        cancellable: false
+      }, async (progress) => {
+        try {
+          progress.report({ increment: 30, message: "Running minimalism analysis..." });
+          const issues = await detectAestheticMinimalism(content);
+          progress.report({ increment: 100, message: "Analysis complete." });
 
-    try {
-      const issues = detectAestheticMinimalism(content);
-
-      feedbackHandler.showResults(fileName, issues.map(issue => ({
-        ...issue,
-        analysisType: 'AESTHETIC_MINIMALISM'
-      })));
-    } catch (err) {
-      console.error(`Error running Aesthetic Minimalism detector on ${fileName}:`, err);
-      vscode.window.showErrorMessage(`Aesthetic Minimalism analysis failed: ${err.message}`);
-    }
+          feedbackHandler.showResults(fileName, issues.map(issue => ({
+            ...issue,
+            analysisType: 'AESTHETIC_MINIMALISM'
+          })));
+        } catch (err) {
+          console.error(`Error running Aesthetic Minimalism detector on ${fileName}:`, err);
+          vscode.window.showErrorMessage(`Aesthetic Minimalism analysis failed: ${err.message}`);
+        }
+      });
   });
 
   //Command: Analyze Help Error Recognition

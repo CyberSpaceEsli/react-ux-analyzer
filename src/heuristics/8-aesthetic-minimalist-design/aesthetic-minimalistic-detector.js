@@ -73,7 +73,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
       if (!tagNode || tagNode.type !== "JSXIdentifier") return;
       const tagName = tagNode.name;
 
-      const line = node.loc?.start?.line ?? null;
+      const line = node.loc?.start?.line ?? 1;
 
       let className = '';
       let styleKey = '';
@@ -178,8 +178,8 @@ async function detectAestheticMinimalism(content, overrideUrl) {
   const utilsDir = path.resolve(__dirname, 'utils');
   if (!fs.existsSync(utilsDir)) fs.mkdirSync(utilsDir, { recursive: true });
 
-  const screenshotPathVar = 'src/heuristics/8-aesthetic-minimalist-design/utils/screenshot.png';
   //const screenshotPath = path.join(utilsDir, screenshotPathVar);
+  const screenshotPath = require('path').join(__dirname, 'utils', 'screenshot.png');
   const maskPath = path.join(utilsDir, 'mask.json');
   const debugImagePath = path.join(utilsDir, 'debug-whitespace.png');
 
@@ -228,12 +228,13 @@ async function detectAestheticMinimalism(content, overrideUrl) {
   });
 
   // 📸 Screenshot after viewport adjustment
-  await page.screenshot({ path: screenshotPathVar });
+  // @ts-ignore
+  await page.screenshot({ path: screenshotPath });
   await browser.close();
 
   // 💾 Save for debug
   fs.writeFileSync(maskPath, JSON.stringify({ boxes, layoutHeight: measuredHeight }, null, 2));
-  await drawElementAreas(screenshotPathVar, maskPath, debugImagePath);
+  await drawElementAreas(screenshotPath, maskPath, debugImagePath);
 
   const layoutArea = layoutWidth * measuredHeight;
   const elementArea = boxes.reduce((sum, box) => {
@@ -242,14 +243,15 @@ async function detectAestheticMinimalism(content, overrideUrl) {
   }, 0);
 
   const whitespaceRatio = 1 - (elementArea / layoutArea);
-  console.log(`[🧪 DEBUG] whitespaceRatio = ${(whitespaceRatio * 100).toFixed(1)}%`);
 
   if (whitespaceRatio < 0.99) {
     feedback.push({
       type: 'low-whitespace',
-      line: 0,
+      line: 1,
       message: `Low whitespace detected in layout: ${(whitespaceRatio * 100).toFixed(1)}%. Layout may feel crowded.`,
-      severity: 'warning'
+      severity: 'warning',
+      why: 'Adequate whitespace improves readability and user focus by reducing visual clutter.',
+      action: 'Increase spacing around elements to enhance clarity and aesthetics.',
     });
   }
 
