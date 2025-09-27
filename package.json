@@ -16,7 +16,7 @@
   "main": "./extension.js",
   "contributes": {
     "commands": [
-        {
+      {
         "command": "react-ux-analyzer.setApiKey",
         "title": "🔑 Set OpenRouter API Key"
       },
@@ -125,8 +125,9 @@
     "@babel/parser": "^7.28.4",
     "@babel/traverse": "^7.28.4",
     "dotenv": "^17.2.2",
-    "puppeteer": "^24.22.0",
+    "image-js": "^1.0.0",
     "node-fetch": "^3.3.2",
+    "puppeteer": "^24.22.0",
     "react": "^18.0.0"
   },
   "devDependencies": {
