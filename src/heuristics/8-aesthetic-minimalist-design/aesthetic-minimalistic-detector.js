@@ -12,6 +12,7 @@ const { drawElementAreas } = require('./draw-element-areas');
  * Heuristic: Nielsen #8 - Aesthetic and Minimalist Design
  * - More than 3 primary colors used (tailwind or inline styles)
  * - Clickable vs non-clickable elements sharing the same visual style
+ * - Low whitespace ratio in layout
  */
 async function detectAestheticMinimalism(content, overrideUrl) {
   const feedback = [];
@@ -143,6 +144,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
 
   });
 
+  // Check for too many primary colors used
   const totalColorsUsed = new Set([...tailwindColorSet, ...inlineColorSet]);
   if (totalColorsUsed.size > 3 && primaryColorLine) {
     feedback.push({
@@ -155,6 +157,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
     });
   }
 
+  // Check for clickable vs non-clickable elements sharing the same visual style
   for (const [visualKey, elements] of styleMap.entries()) {
     const hasClickable = elements.some(e => e.isClickable);
     const hasNonClickable = elements.some(e => !e.isClickable);
@@ -172,20 +175,16 @@ async function detectAestheticMinimalism(content, overrideUrl) {
     }
   }
 
-  // DOM-based analysis for whitespace
+  // DOM-based analysis for whitespace with image-js
   const url = overrideUrl || process.env.REACT_APP_URL || 'http://localhost:3000';
 
   const utilsDir = path.resolve(__dirname, 'utils');
   if (!fs.existsSync(utilsDir)) fs.mkdirSync(utilsDir, { recursive: true });
 
-  //const screenshotPath = path.join(utilsDir, screenshotPathVar);
+  // Path for temporary screenshot and mask files
   const screenshotPath = require('path').join(__dirname, 'utils', 'screenshot.png');
   const maskPath = path.join(utilsDir, 'mask.json');
   const debugImagePath = path.join(utilsDir, 'debug-whitespace.png');
-
-  /*const screenshotPath = './screenshot.png';
-  const maskPath = path.resolve('./masks.json');
-  const debugImagePath = path.resolve('./debug-whitespace.png');*/
 
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
@@ -196,7 +195,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
   const layoutHeight = await page.evaluate(() => document.documentElement.scrollHeight);
   await page.setViewport({ width: 1280, height: layoutHeight });
 
-  // 🧠 Analyze DOM layout and whitespace
+  // Analyze DOM layout and highlight element areas
   const { boxes, layoutWidth, layoutHeight: measuredHeight } = await page.evaluate(() => {
     const selectors = [
       'img', 'video', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -227,13 +226,14 @@ async function detectAestheticMinimalism(content, overrideUrl) {
     };
   });
 
-  // 📸 Screenshot after viewport adjustment
+  // Screenshot after viewport adjustment
   // @ts-ignore
   await page.screenshot({ path: screenshotPath });
   await browser.close();
 
-  // 💾 Save for debug
+  // Save mask.json and debug image for whitespace visualization
   fs.writeFileSync(maskPath, JSON.stringify({ boxes, layoutHeight: measuredHeight }, null, 2));
+  // Draw rectangles on the screenshot for visual debugging
   await drawElementAreas(screenshotPath, maskPath, debugImagePath);
 
   const layoutArea = layoutWidth * measuredHeight;
@@ -242,16 +242,18 @@ async function detectAestheticMinimalism(content, overrideUrl) {
     return sum + (area > 5 ? area : 0);
   }, 0);
 
+  // Calculate whitespace ratio set elements area in ratio to total layout area
   const whitespaceRatio = 1 - (elementArea / layoutArea);
 
+  // Warn about low whitespace ratio
   if (whitespaceRatio < 0.99) {
     feedback.push({
       type: 'low-whitespace',
       line: 1,
       message: `Low whitespace detected in layout: ${(whitespaceRatio * 100).toFixed(1)}%. Layout may feel crowded.`,
       severity: 'warning',
-      why: 'Adequate whitespace improves readability and user focus by reducing visual clutter.',
-      action: 'Increase spacing around elements to enhance clarity and aesthetics.',
+      why: 'Help users to scan and read the design as it improves visual hierarchy and focus.',
+      action: 'Apply higher whitespace around elements not related to each other.',
     });
   }
 
