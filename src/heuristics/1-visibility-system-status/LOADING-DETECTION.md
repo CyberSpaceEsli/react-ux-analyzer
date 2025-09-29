@@ -49,14 +49,16 @@ The detector uses Babel to parse and traverse the JSX AST to find patterns relat
 - Prompts user to include the animation for clarity
 
 ## Feedback Example
+```
 {
   Line 73,
   Fetch/axios call detected without loading UI.
-  Action: Wrap the network call with a loading state and show <Spinner />, <CircularProgress />, or text like 'Loading...'.
+  Action: Wrap the network call with a loading state and show `<Spinner />`, `<CircularProgress />`, or text like 'Loading...'.
   Why: Users need feedback that the system is working.
   Heuristic: Nielsen #1: Visibility of System Status (RUX101)
   More info: https://medium.com/design-bootcamp-using-loaders-understanding-their-purpose-types-and-best-practices-a62ca991d472
 }
+```
 
 ## Why the Detector Matters
 - Transparency: Users shouldn’t be left wondering if something is broken or just slow.
