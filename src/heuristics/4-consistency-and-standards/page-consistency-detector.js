@@ -18,9 +18,9 @@ function detectPageConsistency(content, fileType = "jsx") {
   let logoWrappedInLink = false;
   const fontsUsed = new Map();
 
-  // --- CSS Font Checks ---
+  // CSS Font Checks
     if (fileType === "css" || fileType === "scss") {
-    // 1 Check all @font-face blocks
+    // Check all @font-face blocks
     const fontFaceBlocks = [...content.matchAll(/@font-face\s*{([\s\S]*?)}/gi)];
     if (fontFaceBlocks.length > 2) {
         fontFaceBlocks.forEach(block => {
@@ -34,7 +34,7 @@ function detectPageConsistency(content, fileType = "jsx") {
         });
     }
 
-    // 2 Check each @font-face block for number of font-family declarations
+    // Check each @font-face block for number of font-family declarations
     fontFaceBlocks.forEach(block => {
         const fontFamilyMatches = [...block[1].matchAll(/font-family\s*:\s*['"]?([^;'"]+)['"]?/gi)];
         if (fontFamilyMatches.length > 2) {
@@ -50,7 +50,7 @@ function detectPageConsistency(content, fileType = "jsx") {
         }
     });
 
-    // 3 Check @import url(...) fonts
+    // Check @import url(...) fonts
     const importMatches = [...content.matchAll(/@import\s+url\(["']?([^"')]+)["']?\)/gi)];
     if (importMatches.length > 2) {
         importMatches.forEach(match => {

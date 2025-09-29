@@ -10,9 +10,6 @@ const { drawElementAreas } = require('./draw-element-areas');
 /**
  * detectAestheticMinimalism - Detects color overload, confusing clickable styles, and low whitespace ratio
  * Heuristic: Nielsen #8 - Aesthetic and Minimalist Design
- * - More than 3 primary colors used (tailwind or inline styles)
- * - Clickable vs non-clickable elements sharing the same visual style
- * - Low whitespace ratio in layout
  */
 async function detectAestheticMinimalism(content, overrideUrl) {
   const feedback = [];

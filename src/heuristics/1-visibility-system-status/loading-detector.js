@@ -7,18 +7,6 @@ const traverse = require("@babel/traverse").default;
  */
 function detectLoadingPatterns(content) {
   const feedback = [];
-
-  let ast;
-  try {
-    ast = parse(content, {
-      sourceType: "module",
-      plugins: ["jsx", "classProperties"],
-      errorRecovery: true
-    });
-  } catch (err) {
-    throw new Error("JS/JSX code could not be parsed: " + err.message);
-  }
-
   const spinnerTags = ["svg", "span", "div"];
 
   /**
@@ -86,6 +74,17 @@ function detectLoadingPatterns(content) {
     }
 
     return false;
+  }
+
+  let ast;
+  try {
+    ast = parse(content, {
+      sourceType: "module",
+      plugins: ["jsx", "classProperties"],
+      errorRecovery: true
+    });
+  } catch (err) {
+    throw new Error("JS/JSX code could not be parsed: " + err.message);
   }
 
   traverse(ast, {

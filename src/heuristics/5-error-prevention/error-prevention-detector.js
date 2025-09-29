@@ -158,8 +158,10 @@ function detectErrorPrevention(content) {
         feedback.push({
         type: "dev-only-error-handling",
         line,
-        message: `Error handler contains only console logs. Consider displaying user feedback (e.g. setError, <Error />).`,
+        message: `Error handler contains only console logs.`,
         severity: "warning",
+        why: "This provides no feedback to users when an error occurs.",
+        action: "Consider displaying user feedback (e.g. setError, <Error />)",
         });
     }
     }
@@ -196,8 +198,10 @@ function detectErrorPrevention(content) {
           feedback.push({
             type: "missing-undo-option",
             line: node.loc?.start?.line,
-            message: `Destructive button "${buttonText}" found without an undo or restore action nearby. Consider providing an undo or revert option for safety.`,
+            message: `Destructive button "${buttonText}" found without an undo or restore action nearby.`,
             severity: "warning",
+            why: "Users may accidentally trigger destructive actions and need a way to recover.",
+            action: "Add an 'Undo' button or option near the destructive action.",
           });
         }
       }
@@ -225,6 +229,8 @@ function detectErrorPrevention(content) {
               line,
               message: `Dialog contains destructive language but no cancel or 'go back' option.`,
               severity: "warning",
+              why: "Users may feel forced into a destructive action without a way to back out.",
+              action: "Add a 'Cancel' or 'Go Back' button to allow users to exit safely.",
             });
           }
         }
@@ -243,8 +249,10 @@ function detectErrorPrevention(content) {
           feedback.push({
             type: "missing-context-hint",
             line,
-            message: `<${tag}> field is missing contextual help. Consider using 'aria-label', 'title', or helper text.`,
+            message: `<${tag}> field is missing contextual help.`,
             severity: "warning",
+            why: "Users may not understand the purpose of the field without additional context.",
+            action: "Add 'aria-label', 'title', or helper text to clarify the field's purpose.",
           });
         }
       }
@@ -266,8 +274,10 @@ function detectErrorPrevention(content) {
         feedback.push({
         type: "network-missing-catch",
         line: feedbackLine,
-        message: `AJAX call (fetch/axios) is missing error handling (e.g., .catch or try/catch).`,
+        message: `AJAX call (fetch/axios) is missing error handling.`,
         severity: "warning",
+        why: "Network requests can fail, and unhandled errors may lead to poor user experience.",
+        action: "Wrap the call in try/catch or add a .catch handler to manage errors.",
         });
         return;
     }
@@ -309,6 +319,8 @@ function detectErrorPrevention(content) {
         line,
         message: `Catch block only logs errors using console.log or console.error. Consider providing user-facing feedback.`,
         severity: "warning",
+        why: "This provides no feedback to users when an error occurs.",
+        action: "Consider displaying user feedback (e.g. setError, <Error />)",
         });
     }
     },
@@ -325,6 +337,8 @@ function detectErrorPrevention(content) {
         line,
         message: `Try block is missing a catch handler. Errors inside may go unhandled.`,
         severity: "warning",
+        why: "Unhandled errors can lead to poor user experience.",
+        action: "Add a catch block to try{} to handle potential errors.",
         });
     }
     }

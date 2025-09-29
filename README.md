@@ -12,16 +12,6 @@ For example if there is an image subfolder under your extension project workspac
 
 > Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
 
-### 🔐 Using OpenRouter API Features
-
-To use language-based features, you need a free OpenRouter API key:
-
-1. Go to [https://openrouter.ai](https://openrouter.ai)
-2. Log in and go to your dashboard
-3. Copy your API key (starts with `sk-`)
-4. In VS Code, press `Cmd+Shift+P` → "React UX Analyzer: Set API Key"
-5. Paste your key and you're done ✅
-
 ## Requirements
 
 If you have any requirements or dependencies, add a section describing those and how to install and configure them.

@@ -1,75 +1,96 @@
-# FeedbackHandler Documentation
+# 🧾 FeedbackHandler Documentation
 
-Der `FeedbackHandler` ist eine zentrale Komponente für die einheitliche Ausgabe und Benachrichtigung von UX-Analyseergebnissen in der React UX Analyzer Extension.
+The `FeedbackHandler` class is the central system for rendering results and UI/UX feedback inside **React UX Analyzer**. It ensures a unified display of issues across all detectors — including built-in heuristics and custom rules.
 
-## Zweck
+## Purpose
 
-Der FeedbackHandler eliminiert Code-Duplikation und stellt sicher, dass alle Detektoren (BreadcrumbDetector, LoadingDetector, etc.) eine konsistente Ausgabe verwenden.
+- Eliminates duplicated output code across heuristic detectors
+- 📦 Displays results in the **VS Code Problems panel**
+- Automatically maps detected issues to the correct heuristic (or custom rule)
+- 🔗 Supports links to documentation for each rule
 
-## Hauptmerkmale
+## Core Responsibilities
+Following table lists the core functionalities of the **Feedback Handler** and their responsibility.
 
-### ✅ Einheitliche Ausgabe
-- Konsistente Formatierung für alle Analysetypen
-- Standardisierte Icons und Schweregrade
-- Einheitliche VS Code Output Channel Integration
+| Feature | Description |
+|--------|-------------|
+| Consistent formatting | Uses a shared layout for all detectors |
+| Severity handling | Currently limited to `"warning"` (no other severities) |
+| Output Channels | Shows diagnostics + logs with icons per issue |
+| Custom rule support | Auto-detects and formats rules defined by users |
+| Links | Supports `links` for heuristics and `docs` for custom rules, offers fallback links |
 
-### ⚠️ Schweregrad-Behandlung
-- `warning` (❌): Kritische Probleme
-- `suggestion` (💡): Verbesserungsvorschläge  
-- `error` (🚨): Schwere Fehler
-- `info` (ℹ️): Informationen
-
-### 🔧 Erweiterbarkeit
-Einfach neue Analysetypen hinzufügbar durch Erweiterung der Icon- und Label-Maps.
-
-## Verwendung in VS Code Extension
-
-```javascript
+## Usage Example of Feedback Handler (in `extension.js`)
+```js
 const feedbackHandler = new FeedbackHandler();
 
-// Für Breadcrumb-Analyse
-feedbackHandler.showResults({
-    analysisType: 'BREADCRUMB',
-    fileName: fileName,
-    issues: missingBreadcrumbs,
-    issueLabel: 'MISSING BREADCRUMBS'
-});
+const issues = detect....(content);
 
-// Für Loading-Analyse  
-feedbackHandler.showResults({
-    analysisType: 'LOADING',
-    fileName: fileName,
-    issues: loadingIssues,
-    issueLabel: 'LOADING ISSUES'
+feedbackHandler.showResults(fileName, issues.map(issue => ({
+ ...issue,
+ analysisType: '...'
+})));
+```
+
+1. Create a new instance of the `FeedbackHandler()` class
+
+2. Execute your chosen detector (built-in or custom) and store the returned issue objects in a the constant:  `issues`
+
+3. Pass collected issues to `feedbacjHandler.showResults(...)` with file path which automatically formatts message based on `analysisType` adn displays it in  VS Code’s **Problems Panel**
+ 
+## Diagnostic Example Output (VS Code Problem Channel)
+Each feedback issue is rendered as a **diagnostic message** in the VS Code Problems panel.
+```
+Line 42: <img> tag missing alt attribute.
+Action: Add a descriptive alt attribute to all <img> tags.
+Why: Alt text is critical for accessibility and screen readers.
+Heuristic: Custom UX Rule: missingAlt (CUX-MISSINGALT)
+More info: https://www.w3.org/WAI/tutorials/images/decision-tree/
+```
+
+> **Note**: Showing feedback in the **Problem Channel** allows for **code highlighting** and **tooltips** on hover, which also show the diagnostics.
+
+## Severity Mapping
+⚠️ Only `"warning"` feedback is currently shown to avoid noise and each detection needs to be solved for optimal UI/UX flow.
+```js
+feedback.push({    
+    // other feedback issue types
+    severity: 'warning',
+    // other feedback issue types        
 });
 ```
 
-## Unterstützte Analysetypen
+## Issue Types
+Each issue contains:
+| Field | Data type | Description |
+|--------|--------|-------------|
+| `line`  | `number` | Uses a shared layout for all detectors |
+| `message` | `string` | Tells users what got detected  |
+| `severity` | `string` | Currently limited to `"warning"` (no other severities) |
+| `analysisType` | `string` | Maps to a Nielsen heuristic or custom rule here use `CUSTOM:my-custom-rule.js` |
+| `why` | `string` | Why issue matters to users |
+| `action` | `string` | How to fix issue |
+| `docs` | `string` | Supports `links` for heuristics and `docs` for custom rules, offers fallback links |
 
-| Typ | Icon | Beschreibung |
-|-----|------|--------------|
-| BREADCRUMB | ❌ | Navigation/Breadcrumb-Analyse |
-| LOADING | ⚠️ | Loading-State-Analyse |
-| NAVIGATION | 🧭 | Allgemeine Navigation |
-| FEEDBACK | 💬 | User-Feedback-Analyse |
-| ERROR | 🚨 | Fehlerbehandlung |
 
-## Hilfsfunktionen
+## Heuristic Labels
+Internally, `analysisType` maps to heuristic names and codes like so:
+| analysisType | Heuristic Name | Code |
+|------------------|-----------------|-------------|
+| `BREADCRUMB`  | Visibility of System Status | RUX101 |
+| `LOADING` | Visibility of System Status | RUX102  |
+| `MATCH_SYSTEM_REAL_WORLD` | Match System & Real World | RUX201 |
+| `CONTROL` | User Control & Freedom | RUX301 |
+| `CONSISTENCY` | Consistency & Standards | RUX401 |
+| `ERROR_PREVENTION` | Error Prevention | RUX501 |
+| `RECOGNITION` | Recognition vs. Recall | RUX601|
+| `FLEXIBILITY_EFFICIENCY` | Flexibility & Efficiency | RUX701|
+| `AESTHETIC_MINIMALISM` | Aesthetic & Minimalist Design | RUX801|
+| `ERROR_RECOVERY` | Help Users Recover from Errors | RUX901|
+| `HELP` | Help & Documentation | RUX1001|
+| `CUSTOM:*` | Custom UX Rule | CUX-*|
 
-### `FeedbackHandler.filterIssues(patterns, severities)`
-Filtert Patterns nach Schweregrad für konsistente Ausgabe.
-
-```javascript
-const issues = FeedbackHandler.filterIssues(patterns, ['warning', 'suggestion']);
-```
-
-## Integration mit neuen Detektoren
-
-1. Detektor entwickeln und Pattern mit `severity` zurückgeben
-2. Analysetyp in FeedbackHandler-Maps hinzufügen (optional)
-3. In Extension mit `feedbackHandler.showResults()` verwenden
-4. Fertig! Einheitliche Ausgabe garantiert.
-
-## Testing
-
-Für Tests außerhalb von VS Code steht `test-feedback-helper.js` zur Verfügung, der die gleiche Formatierung ohne VS Code API bietet.
+### More Examples
+For questions or examples, see:
+- [Custom UX Rule Documentation](./utils/CUSTOM-RULES.md)
+- [Heuristic Detection Documentation](./HEURISTICS.md)

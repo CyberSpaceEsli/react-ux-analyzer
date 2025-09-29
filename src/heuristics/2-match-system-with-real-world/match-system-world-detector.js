@@ -28,7 +28,7 @@ async function detectMatchSystemwithRealWorld(visibleText, apiKey, domain = 'gen
                             message: match, // e.g. "Jargon detected: Cloud Instance – technical cloud computing term, replace with "Cloud Server"
                             severity: 'warning',
                             why: 'Users should understand meaning without needing to look it up.',
-                            action: 'Use plain language that matches users\' mental models, see LLM answer.',
+                            action: 'Use words, phrases, and concepts familiar to the user, see LLM answer.',
                         });
                     }
                 }

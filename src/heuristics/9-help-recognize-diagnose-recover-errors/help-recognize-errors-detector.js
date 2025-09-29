@@ -108,6 +108,8 @@ function detectHelpErrorRecognition(content) {
             line,
             message: `User-facing error contains technical jargon or error code ("${text.trim()}"). Express errors in plain language and offer a constructive suggestion.`,
             severity: "warning",
+            why: `Technical error messages can confuse users and hinder their ability to recover from errors.`,
+            action: `Replace technical terms with user-friendly language and provide actionable next steps.`,
           });
         }
 
@@ -122,6 +124,8 @@ function detectHelpErrorRecognition(content) {
           line,
           message: `Error message detected but lacks visual cues like red color and bold font.`,
           severity: "warning",
+          why: `Errors should be visually distinct to help users quickly recognize them.`,
+          action: `Add visual styles (e.g., red text, bold font) to make the error message stand out.`,
         });
       }
     }

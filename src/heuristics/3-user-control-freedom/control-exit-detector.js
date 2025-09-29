@@ -30,7 +30,7 @@ function detectControlExits(content) {
 
       // --- Modal/Dialog/Drawer/Popover checks ---
       if (["Modal", "Dialog", "Drawer", "Popover"].includes(elementName)) {
-        // 1️⃣ Must have onClose prop
+        // Must have onClose prop
         const hasOnClose = node.openingElement.attributes.some(
           a => a.type === "JSXAttribute" && a.name.name === "onClose"
         );
@@ -45,7 +45,7 @@ function detectControlExits(content) {
           });
         }
 
-        // 2️⃣ Check for buttons with "close" or "cancel" text inside
+        // Check for buttons with "close" or "cancel" text inside
         const closeButtonExists = node.children.some(child => {
           if (child.type === "JSXElement" && child.openingElement.name.type === "JSXIdentifier") {
             if (child.openingElement.name.name === "button") {
@@ -67,11 +67,13 @@ function detectControlExits(content) {
             line: node.loc.start.line,
             message: `${elementName} has no visible Close or Cancel button. Add a clear exit mechanism.`,
             severity: "warning",
+            why: "Make sure the exit in the modal/dialog is clearly labeled and discoverable.",
+            action: "Add a Close or Cancel button inside the modal/dialog."
           });
         }
       }
 
-      // --- Button checks for multi-step forms and destructive actions ---
+      // Button checks for multi-step forms and destructive actions
       if (elementName === "button") {
         const buttonText = (node.children || [])
           .map(c => (c.type === "JSXText" ? c.value : ""))
@@ -94,7 +96,7 @@ function detectControlExits(content) {
     },
   });
 
-  // --- Multi-step forms: Next without Back ---
+  // Multi-step forms: Next without Back
   if (hasNextButton && !hasBackButton) {
     for (const line of nextButtonLines) {
       feedback.push({
@@ -102,18 +104,22 @@ function detectControlExits(content) {
         line,
         message: "Multi-step flow has Next/Finish button but no Back/Previous button. Provide a way to reverse steps.",
         severity: "warning",
+        why: "Users may want to go back to previous steps in a multi-step process.",
+        action: "Add a Back or Previous button to allow users to navigate backwards.",
       });
     }
   }
 
-  // --- Destructive actions without Undo ---
+  // Destructive actions without Undo
   if (destructiveButtons.length > 0 && undoButtons.length === 0) {
     for (const btn of destructiveButtons) {
       feedback.push({
         type: "missing-control",
         line: btn.loc.start.line,
-        message: "Destructive action detected without Undo/Cancel/Restore. Allow users to revert mistakes.",
+        message: "Destructive action detected without Undo/Cancel/Restore.",
         severity: "warning",
+        why: "Users may accidentally trigger destructive actions and need a way to recover.",
+        action: "Add an Undo, Cancel, or Restore option after destructive actions.",
       });
     }
   }

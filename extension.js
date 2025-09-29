@@ -15,8 +15,8 @@ const { loadCustomRules } = require('./src/heuristics/utils/load-custom-rules');
 async function usabilityAnalyzeReactFiles() {
   const feedbackHandler = new FeedbackHandler();
 
-  // Only scan src folder for JSX/TSX files
-  const files = await vscode.workspace.findFiles('src/**/*.{jsx, tsx}');
+  // Only scan src folder for JSX files
+  const files = await vscode.workspace.findFiles('src/**/*.{jsx}');
 
   if (files.length === 0) {
     vscode.window.showInformationMessage('No React source files found in the src folder.');
@@ -97,7 +97,7 @@ async function usabilityAnalyzeReactFiles() {
     if (shortcutIssues.length > 0) {
       feedbackHandler.showResults(
         fileName,
-        shortcutIssues.map(issue => ({ ...issue, analysisType: 'FLEXIBILITY & EFFICIENCY' }))
+        shortcutIssues.map(issue => ({ ...issue, analysisType: 'FLEXIBILITY_EFFICIENCY' }))
       );
     }
 
@@ -423,7 +423,7 @@ function activate(context) {
 
       feedbackHandler.showResults(fileName, issues.map(issue => ({
         ...issue,
-        analysisType: 'FLEXIBILITY & EFFICIENCY'
+        analysisType: 'FLEXIBILITY_EFFICIENCY'
       })));
     } catch (err) {
       console.error(`Error running Shortcuts detector on ${fileName}:`, err);

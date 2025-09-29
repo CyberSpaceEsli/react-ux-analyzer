@@ -84,8 +84,10 @@ function detectRecognitionCues(content) {
           feedback.push({
             type: "missing-placeholder",
             line,
-            message: `<input type='${typeValue}'> is missing a placeholder to help users recognize the expected format`,
+            message: `<input type='${typeValue}'> is missing a placeholder attribute.`,
             severity: "warning",
+            why: `Placeholders help users recognize the expected input format.`,
+            action: `Add a descriptive placeholder, e.g. <input type='${typeValue}' placeholder='Enter your ${typeValue}'>`,
           });
         }
       }

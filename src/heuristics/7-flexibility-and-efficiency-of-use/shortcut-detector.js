@@ -131,7 +131,7 @@ function detectShortcuts(content) {
   },
   });
 
-  // === Regex-based menu/nav shortcut hint detection ===
+  // Regex-based menu/nav shortcut hint detection
 
   const shortcutRegex = /\b(Ctrl|Cmd|⌘|Alt|Option|Shift)\s*\+?\s*\w+/i;
   const navOrMenuBlocks = [...content.matchAll(/<(nav|link|menu)[^>]*>([\s\S]*?)<\/\1>/gi)];
