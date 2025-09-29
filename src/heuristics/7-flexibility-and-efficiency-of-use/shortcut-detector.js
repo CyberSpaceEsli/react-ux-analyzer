@@ -2,7 +2,7 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 
 /**
- * detectShortcuts - checks React code for keyboard shortcut implementation
+ * detectShortcuts - Detects presence of keyboard shortcut handling in fetch and useEffect
  * Based on Nielsen Heuristic #7: Flexibility & Efficiency of Use
  */
 function detectShortcuts(content) {
@@ -15,7 +15,7 @@ function detectShortcuts(content) {
     throw new Error("JSX code could not be parsed: " + err.message);
   }
 
-  // === AST Analysis for keyboard listener ===
+  // Analysis for keyboard listener
   traverse(ast, {
     CallExpression(path) {
     const callee = path.node.callee;

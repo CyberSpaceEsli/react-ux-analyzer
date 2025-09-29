@@ -2,7 +2,7 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 
 /**
- * detectPageConsistency - Checks page consistency and standards
+ * detectPageConsistency - Detects inconsistencies in page structure and too many font styles
  * Nielsen Heuristic #4: Consistency & Standards
  */
 function detectPageConsistency(content, fileType = "jsx") {

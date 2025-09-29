@@ -2,7 +2,7 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 
 /**
- * detectErrorPrevention - Scans React code for usability issues based on
+ * detectErrorPrevention - Detects meaningful user feedback and error prevention for fetch/axios calls
  * Nielsen's Heuristic #5: Error Prevention
  */
 function detectErrorPrevention(content) {

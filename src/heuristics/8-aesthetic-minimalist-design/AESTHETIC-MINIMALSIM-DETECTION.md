@@ -1,0 +1,1 @@
+# Aesthetic Minimalism Detector (`aesthetic-minimalistic-detector.js`)

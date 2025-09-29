@@ -1,0 +1,1 @@
+# Help Detector (`help-detector.js`)

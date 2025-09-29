@@ -87,6 +87,11 @@
         "command": "react-ux-analyzer.analyzeVisualQuality",
         "title": "Analyze Visual Quality (NIMA)",
         "category": "React UX Analyzer"
+      },
+      {
+        "command": "react-ux-analyzer.analyzeCustomRules",
+        "title": "Analyze Custom UX Rules",
+        "category": "React UX Analyzer"
       }
     ],
     "menus": {

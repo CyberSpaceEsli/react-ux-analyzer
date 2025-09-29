@@ -7,9 +7,10 @@
 const vscode = require('vscode');
 const http = require('http');
 const { detectBreadcrumbs, detectLoadingPatterns, detectMatchSystemwithRealWorld, detectControlExits, detectPageConsistency, detectErrorPrevention, detectRecognitionCues, detectShortcuts, detectAestheticMinimalism, detectHelpErrorRecognition, detectHelpFeatures, FeedbackHandler } = require('./src/heuristics');
-const { detectBusinessDomain } = require('./src/heuristics/2-match-system-with-real-world/languageAnalyzer.js');
+const { detectBusinessDomain } = require('./src/heuristics/2-match-system-with-real-world/language-analyzer.js');
 const { extractVisibleTextFromCode } = require('./src/heuristics/utils/extractVisibleText');
 const { runVisualQualityCheck } = require('./src/visual-quality-analysis');
+const { loadCustomRules } = require('./src/heuristics/utils/load-custom-rules');
 
 async function usabilityAnalyzeReactFiles() {
   const feedbackHandler = new FeedbackHandler();
@@ -591,6 +592,62 @@ function activate(context) {
       );
     });
 
+    // 🔍 Command: Analyze Custom UX Rules
+    const analyzeCustomRulesCommand =  vscode.commands.registerCommand('react-ux-analyzer.analyzeCustomRules', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('❌ Please open a file first!');
+      return;
+    }
+
+    const document = editor.document;
+    const content = document.getText();
+    const fileName = document.fileName;
+
+    // Get preview URL from settings or default
+    const url = vscode.workspace.getConfiguration('react-ux-analyzer').get('previewUrl') || 'http://localhost:3000';
+
+    vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: "Running custom UX rules...",
+      cancellable: false
+    }, async (progress) => {
+      try {
+        progress.report({ increment: 30, message: "Loading custom rules..." });
+        const rules = await loadCustomRules();
+
+        const feedback = [];
+
+        for (const rule of rules) {
+          progress.report({ increment: 10, message: `Running ${rule.name}` });
+          try {
+            // If a rule acceptsURL is true, pass url; otherwise just pass content
+            const result = rule.acceptsUrl
+              ? await rule.run(content, url)
+              : await rule.run(content);
+
+            if (Array.isArray(result)) {
+              feedback.push(...result.map(issue => ({
+                ...issue,
+                analysisType: `CUSTOM:${rule.name}`
+              })));
+            }
+          } catch (err) {
+            console.warn(`⚠️ Error in custom rule '${rule.name}':`, err.message);
+          }
+        }
+
+        progress.report({ increment: 100, message: "Custom rule analysis complete." });
+
+        feedbackHandler.showResults(fileName, feedback);
+
+      } catch (err) {
+        console.error(`Error running custom rules on ${fileName}:`, err);
+        vscode.window.showErrorMessage(`Custom UX rule analysis failed: ${err.message}`);
+      }
+    });
+  });
+
   // Project-wide command: Analyze all React files in src folder
   const analyzeProjectCommand = vscode.commands.registerCommand('react-ux-analyzer.usabilityAnalyzeReactFiles', usabilityAnalyzeReactFiles);
 
@@ -607,6 +664,7 @@ function activate(context) {
   context.subscriptions.push(analyzeMinimalismCommand);
   context.subscriptions.push(analyzeHelpErrorCommand);
   context.subscriptions.push(analyzeHelpCommand);
+  context.subscriptions.push(analyzeCustomRulesCommand);
 
   console.log('✅ React UX Analyzer commands registered!');
 }

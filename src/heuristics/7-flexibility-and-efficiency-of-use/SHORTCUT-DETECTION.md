@@ -1,0 +1,1 @@
+# Shortcut Detector (`shortcut-detector.js`)

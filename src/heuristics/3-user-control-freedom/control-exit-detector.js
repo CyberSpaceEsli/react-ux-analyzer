@@ -2,7 +2,7 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 
 /**
- * detectControlExits - Detects missing exit mechanisms in React components
+ * detectControlExits - Detects missing exit mechanisms in modals and dialogs, missing Back buttons in multi-step flows, and missing Undo options for destructive actions.
  * Nielsen Heuristic #3: User Control and Freedom
  */
 function detectControlExits(content) {

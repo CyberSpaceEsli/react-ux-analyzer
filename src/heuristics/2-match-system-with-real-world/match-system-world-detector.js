@@ -1,7 +1,7 @@
-const { checkForJargon } = require("./languageAnalyzer.js");
+const { checkForJargon } = require("./language-analyzer.js");
 
 /**
- * Detects internal or technical jargon in UI text elements.
+ * detectMatchSystemwithRealWorld - Detects internal or technical jargon in UI text elements.
  * Heuristic: Nielsen #2 - Match between system and the real world
  * Jargon can confuse users and hinder usability.
  */

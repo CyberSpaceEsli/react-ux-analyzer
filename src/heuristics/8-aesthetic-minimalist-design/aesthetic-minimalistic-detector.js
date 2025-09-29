@@ -8,7 +8,7 @@ const path = require('path');
 const { drawElementAreas } = require('./draw-element-areas');
 
 /**
- * Detects minimalist aesthetic violations in React JSX code.
+ * detectAestheticMinimalism - Detects color overload, confusing clickable styles, and low whitespace ratio
  * Heuristic: Nielsen #8 - Aesthetic and Minimalist Design
  * - More than 3 primary colors used (tailwind or inline styles)
  * - Clickable vs non-clickable elements sharing the same visual style
@@ -199,7 +199,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
   const { boxes, layoutWidth, layoutHeight: measuredHeight } = await page.evaluate(() => {
     const selectors = [
       'img', 'video', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-      'label', 'li', 'p', 'a', 'button', 'span'
+      'label', 'li', 'p', 'a', 'button', 'span', 'textarea', 'input'
     ];
     const elements = selectors.flatMap(selector =>
       //eslint-disable-next-line
@@ -242,11 +242,11 @@ async function detectAestheticMinimalism(content, overrideUrl) {
     return sum + (area > 5 ? area : 0);
   }, 0);
 
-  // Calculate whitespace ratio set elements area in ratio to total layout area
+  // Calculate whitespace ratio sets elements area in ratio to total layout area
   const whitespaceRatio = 1 - (elementArea / layoutArea);
 
   // Warn about low whitespace ratio
-  if (whitespaceRatio < 0.99) {
+  if (whitespaceRatio < 0.2) { // Less than 20% of layout area is whitespace
     feedback.push({
       type: 'low-whitespace',
       line: 1,

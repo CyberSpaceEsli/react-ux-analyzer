@@ -1,8 +1,7 @@
-// languageAnalyzer.js
-
+// language-analyzer.js
 const analysisCache = new Map();
 
-// ---[ 1. Shared fetch logic to LLaMA-3 via OpenRouter ]---
+// Shared fetch logic using Grok4 via OpenRouter
 async function getLLMCompletion(text, apiKey, maxTokens = 100, temperature = 0.3) {
     try {
         const fetch = (await import('node-fetch')).default;
@@ -43,7 +42,7 @@ async function getLLMCompletion(text, apiKey, maxTokens = 100, temperature = 0.3
     }
 }
 
-// ---[ 2. Business Domain Detection ]---
+// Business Domain with LLM
 async function detectBusinessDomain(text, availableDomains = ['health', 'legal', 'finance', 'e-commerce', 'information technology', 'education'], apiKey) {
     if (!text || text.trim().length < 100) return null;
 
@@ -77,7 +76,7 @@ ${text.substring(0, 3000)}
     }
 }
 
-// ---[ 3. Technical/Internal Jargon Detection ]---
+// 3. Technical/Internal Jargon Detection
 async function checkForJargon(text, businessDomain = 'general', apiKey) {
     if (!text || text.trim().length < 3) return null;
 
@@ -185,7 +184,6 @@ Text to analyze:
     }
 }
 
-// ---[ 4. Exports ]---
 module.exports = {
     checkForJargon,
     detectBusinessDomain,

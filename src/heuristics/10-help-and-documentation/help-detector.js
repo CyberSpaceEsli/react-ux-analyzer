@@ -1,6 +1,10 @@
 const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 
+/*
+    * detectHelpFeatures - Detects missing Help features like onboarding modals, help links, and icon only buttons
+    * Based on Nielsen Heuristic #10: Help and Documentation
+*/
 function detectHelpFeatures(content) {
   const feedback = [];
 

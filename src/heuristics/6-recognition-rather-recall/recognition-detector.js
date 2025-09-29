@@ -1,7 +1,7 @@
 const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 /*
-    * detectRecognitionCues - checks React code for recognition over recall features
+    * detectRecognitionCues - Detects nav overload and missing placeholders for form input types
     * Based on Nielsen Heuristic #6: Recognition Rather Than Recall
 */
 function detectRecognitionCues(content) {

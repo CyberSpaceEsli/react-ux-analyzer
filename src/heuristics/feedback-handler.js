@@ -23,13 +23,13 @@ class FeedbackHandler {
       const diagnostic = new vscode.Diagnostic(
         range,
         this._formatMessage(issue),
-        this._mapSeverity(issue.severity)
+        this._mapSeverity()
       );
 
       diagnostic.source = 'React UX Analyzer';
       diagnostic.code = {
         value: this._getHeuristicCode(issue.analysisType),
-        target: this._getDocumentationLink(issue.analysisType)
+        target: this._getDocumentationLink(issue.analysisType, issue.docs)
       };
       return diagnostic;
     });
@@ -47,16 +47,10 @@ class FeedbackHandler {
   }
 
   /**
-   * Map detector severity to VS Code DiagnosticSeverity
-   */
-  _mapSeverity(severity) {
-    const map = {
-      'error': vscode.DiagnosticSeverity.Error,
-      'warning': vscode.DiagnosticSeverity.Warning,
-      'info': vscode.DiagnosticSeverity.Information,
-      'hint': vscode.DiagnosticSeverity.Hint
-    };
-    return map[severity] || vscode.DiagnosticSeverity.Warning;
+ * Map detector severity to VS Code DiagnosticSeverity
+ */
+  _mapSeverity() {
+    return vscode.DiagnosticSeverity.Warning;
   }
 
   /**
@@ -65,7 +59,7 @@ class FeedbackHandler {
   _formatMessage(issue) {
    const heuristic = this._getHeuristicName(issue.analysisType);
   const heuristicCode = this._getHeuristicCode(issue.analysisType);
-  const docLink = this._getDocumentationLink(issue.analysisType);
+  const docLink = this._getDocumentationLink(issue.analysisType, issue.docs);
 
   // Problem description
   const problem = issue.problem || issue.message || "UX issue detected";
@@ -96,6 +90,12 @@ class FeedbackHandler {
       'ERROR_RECOVERY': 'Nielsen #9: Help Users Recognize, Diagnose, and Recover from Errors',
       'HELP': 'Nielsen #10: Help and Documentation'
     };
+
+    if (analysisType?.startsWith('CUSTOM:')) {
+      const customName = analysisType.split(':')[1]?.replace('.cjs', '');
+      return `Custom UX Rule: ${customName || 'Unnamed Rule'}`;
+    }
+
     return heuristics[analysisType] || 'Nielsen Heuristic';
   }
 
@@ -116,13 +116,34 @@ class FeedbackHandler {
       'ERROR_RECOVERY': 'RUX901',
       'HELP': 'RUX1001'
     };
+
+    if (analysisType?.startsWith('CUSTOM:')) {
+      const customCode = analysisType.split(':')[1]?.replace('.cjs', '').toUpperCase();
+      return `CUX-${customCode || 'UNKNOWN'}`;
+    }
+
     return codes[analysisType] || 'RUX000';
   }
 
   /**
    * Heuristic Learning Material Links
    */
-  _getDocumentationLink(analysisType) {
+  _getDocumentationLink(analysisType, docsOverride) {
+
+    // custom rule with docs link
+  if (docsOverride) {
+    return vscode.Uri.parse(docsOverride);
+  }
+   /* if (issue.docs) {
+    return vscode.Uri.parse(issue.docs);
+  }*/
+
+   // custom rule link fallback
+  if (analysisType?.startsWith('CUSTOM:')) {
+    return vscode.Uri.parse('https://github.com/your-org/react-ux-analyzer#custom-rules');
+  }
+
+    // Standard heuristic links
     const links = {
       'BREADCRUMB': 'https://www.nngroup.com/articles/breadcrumbs/',
       'LOADING': 'https://medium.com/design-bootcamp/using-loaders-understanding-their-purpose-types-and-best-practices-a62ca991d472',
@@ -136,6 +157,7 @@ class FeedbackHandler {
       'ERROR_RECOVERY': 'https://www.nngroup.com/articles/help-users-recognize-diagnose-and-recover-from-errors/',
       'HELP': 'https://www.nngroup.com/articles/help-and-documentation/'
     };
+
     return vscode.Uri.parse(links[analysisType] || 'https://www.nngroup.com/articles/ten-usability-heuristics/');
   }
 
@@ -161,7 +183,7 @@ class FeedbackHandler {
       this.outputChannel.appendLine(`${i + 1}. ${icon} Line ${issue.line}: ${issue.message}`);
       if (issue.content) this.outputChannel.appendLine(`   Code: ${issue.content}`);
       this.outputChannel.appendLine(`   Heuristic: ${this._getHeuristicName(issue.analysisType)} (${this._getHeuristicCode(issue.analysisType)})`);
-      this.outputChannel.appendLine(`   More info: ${this._getDocumentationLink(issue.analysisType)}`);
+      this.outputChannel.appendLine(`   More info: ${this._getDocumentationLink(issue.analysisType, issue.docs)}`);
       this.outputChannel.appendLine('');
     });
 
