@@ -28,9 +28,9 @@ function detectControlExits(content) {
       const nameNode = node.openingElement.name;
       const elementName = nameNode?.type === "JSXIdentifier" ? nameNode.name : null;
 
-      // --- Modal/Dialog/Drawer/Popover checks ---
+      // Do Modal/Dialog/Drawer/Popover components have onClose prop and visible close button
       if (["Modal", "Dialog", "Drawer", "Popover"].includes(elementName)) {
-        // Must have onClose prop
+        // must have onClose prop
         const hasOnClose = node.openingElement.attributes.some(
           a => a.type === "JSXAttribute" && a.name.name === "onClose"
         );
@@ -45,7 +45,7 @@ function detectControlExits(content) {
           });
         }
 
-        // Check for buttons with "close" or "cancel" text inside
+        // check for buttons with "close" or "cancel" text inside
         const closeButtonExists = node.children.some(child => {
           if (child.type === "JSXElement" && child.openingElement.name.type === "JSXIdentifier") {
             if (child.openingElement.name.name === "button") {
@@ -73,7 +73,7 @@ function detectControlExits(content) {
         }
       }
 
-      // Button checks for multi-step forms and destructive actions
+      // Checks multi-step forms if back/previous exists whith next/finish and buttons for destructive actions
       if (elementName === "button") {
         const buttonText = (node.children || [])
           .map(c => (c.type === "JSXText" ? c.value : ""))
@@ -81,14 +81,14 @@ function detectControlExits(content) {
           .trim()
           .toLowerCase();
 
-        // Multi-step form navigation
+        // multi-step form navigation
         if (buttonText.includes("next") || buttonText.includes("finish")) {
           hasNextButton = true;
           nextButtonLines.push(node.loc.start.line);
         }
         if (buttonText.includes("back") || buttonText.includes("previous")) hasBackButton = true;
 
-        // Destructive actions
+        // destructive actions
         if (buttonText.includes("delete") || buttonText.includes("remove")) destructiveButtons.push(node);
         if (buttonText.includes("undo") || buttonText.includes("cancel") || buttonText.includes("restore"))
           undoButtons.push(node);
@@ -96,7 +96,7 @@ function detectControlExits(content) {
     },
   });
 
-  // Multi-step forms: Next without Back
+  // multi-step forms next without back
   if (hasNextButton && !hasBackButton) {
     for (const line of nextButtonLines) {
       feedback.push({
@@ -110,7 +110,7 @@ function detectControlExits(content) {
     }
   }
 
-  // Destructive actions without Undo
+  // destructive actions without undo
   if (destructiveButtons.length > 0 && undoButtons.length === 0) {
     for (const btn of destructiveButtons) {
       feedback.push({

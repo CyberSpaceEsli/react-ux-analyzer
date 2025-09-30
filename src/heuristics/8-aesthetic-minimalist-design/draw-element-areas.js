@@ -16,6 +16,7 @@ async function drawElementAreas(screenshotPath, maskPath, outputPath = 'debug-wh
 
   let result = image.clone();
 
+  // Draw rectangles for each bounding box depending on values of mask.json
   for (const { x, y, width, height } of boxes) {
     result = result.drawRectangle({
       origin: { row: y, column: x },

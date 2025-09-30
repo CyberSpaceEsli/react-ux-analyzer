@@ -2,25 +2,23 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 
 /**
- * detectLoadingPatterns - checks React code for missing loading indicators
+ * detectLoadingPatterns - checks React code for missing loading indicators in network calls and buttons
  * Heuristic: Nielsen #1 - Visibility of System Status
  */
 function detectLoadingPatterns(content) {
   const feedback = [];
   const spinnerTags = ["svg", "span", "div"];
 
-  /**
-   * Helper: checks if a JSX element or its children have valid loading indicators
-   */
+  // Helper: checks if a JSX element or its children have valid loading indicators
   function checkLoadingIndicator(node) {
     if (!node || node.type !== "JSXElement") return false;
 
     const name = node.openingElement.name;
 
-    // 1 Recognize Spinner / CircularProgress
+    // recognize Spinner / CircularProgress components
     if (name.type === "JSXIdentifier" && /spinner|circularprogress/i.test(name.name)) return true;
 
-    // 2 Tailwind animate-spin check for svg, span, div
+    // search for Tailwind animate-spin classes on svg, span, div
     if (name.type === "JSXIdentifier" && spinnerTags.includes(name.name.toLowerCase())) {
       const attrs = node.openingElement.attributes || [];
       const hasAnimateSpin = attrs.some(
@@ -47,7 +45,7 @@ function detectLoadingPatterns(content) {
       return true; // valid spinner
     }
 
-    // 3 Check children recursively for text or JSX expressions
+    // search for text nodes with "loading", "submitting", "processing"
     if (node.children) {
       for (const child of node.children) {
         if (child.type === "JSXText" && /loading|submitting|processing/i.test(child.value)) return true;
@@ -62,7 +60,7 @@ function detectLoadingPatterns(content) {
             )
               return true;
           }
-          // Short-circuit {loading && <Spinner />}
+          // does it have short-circuit like {loading && <Spinner />}
           if (child.expression.type === "LogicalExpression") return true;
 
           if (child.expression.type === "StringLiteral" && /loading|submitting|processing/i.test(child.expression.value))
@@ -104,16 +102,16 @@ function detectLoadingPatterns(content) {
 
       if (!bodyNode) return; // safety guard
 
-      // Block statement (normal function)
+      // function body is block statement
       if (bodyNode.type === "BlockStatement") {
         bodyStatements = bodyNode.body;
       } else {
-        // Expression-bodied arrow function
+        // function body is arrow function
         bodyStatements = [bodyNode];
       }
 
       const hasLoadingUI = bodyStatements.some(stmt => {
-        // Check for if (loading) {...}
+        // check for if (loading) {...}
         return (
           stmt.type === "IfStatement" &&
           stmt.test &&
@@ -141,9 +139,9 @@ function detectLoadingPatterns(content) {
     JSXElement(path) {
     const node = path.node;
 
-    // Only check <button> elements
+    // only check <button> elements
     if (node.openingElement.name.type === "JSXIdentifier" && node.openingElement.name.name === "button") {
-      // Check if button has type="submit"
+      // check if button has type="submit"
       const typeAttr = node.openingElement.attributes.find(
         a => a.type === "JSXAttribute" && a.name.name === "type"
       );
@@ -153,13 +151,14 @@ function detectLoadingPatterns(content) {
           : undefined;
 
       if (typeValue === "submit") {
-        // Check if button has disabled attribute
+        // check if button has disabled attribute
         const disabledAttr = node.openingElement.attributes.find(
           a => a.type === "JSXAttribute" && a.name.name === "disabled"
         );
 
       const childrenHaveLoading = node.children.map(child => checkLoadingIndicator(child)).some(Boolean);
 
+        // detect if button has disabled={isLoading}
         let hasDisabledIsLoading = false;
         if (disabledAttr && disabledAttr.type === "JSXAttribute" && disabledAttr.value) {
           if (disabledAttr.value.type === "JSXExpressionContainer") {

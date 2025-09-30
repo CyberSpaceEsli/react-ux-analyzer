@@ -2,7 +2,7 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 
 /**
- * detectShortcuts - Detects presence of keyboard shortcut handling in fetch and useEffect
+ * detectShortcuts - Detects presence of keyboard shortcut handling in fetch and useEffect, and visible shortcut hints in menus
  * Based on Nielsen Heuristic #7: Flexibility & Efficiency of Use
  */
 function detectShortcuts(content) {
@@ -15,12 +15,11 @@ function detectShortcuts(content) {
     throw new Error("JSX code could not be parsed: " + err.message);
   }
 
-  // Analysis for keyboard listener
   traverse(ast, {
     CallExpression(path) {
     const callee = path.node.callee;
 
-    // Detect useEffect body
+    // Find useEffect calls and if they contain keyboard event handling
     if (callee &&
       callee.type === "Identifier" &&
       callee.name === "useEffect") {
@@ -36,7 +35,7 @@ function detectShortcuts(content) {
         );
         const effectBody = useEffectBody.body.body || [];
 
-        // Heuristic: does the body contain something like keydown handling?
+        // does body contain some keydown handling
         const intendedShortcut = /key(?:Down)?|keydown|onkeydown|onKey|shortcut/i.test(
           bodyCode
         );
@@ -45,9 +44,9 @@ function detectShortcuts(content) {
         let hasRemoveKeyListener = false;
         let handlerName = null;
 
-        // Loop through each statement inside the useEffect block
+        // loops through each statement inside the useEffect block
         for (const stmt of effectBody) {
-        // Check for: document.addEventListener("keydown", handler)
+        // checks for syntax like document.addEventListener("keydown", handler)
         if (stmt.type === "ExpressionStatement") {
             const expr = stmt.expression;
 
@@ -62,14 +61,14 @@ function detectShortcuts(content) {
             expr.arguments?.[0]?.value === "keydown"
             ) {
             hasAddKeyListener = true;
-            // Store handler name to match later in removeEventListener
+            // store handler name to match later in removeEventListener
             if (expr.arguments[1]?.type === "Identifier") {
                 handlerName = expr.arguments[1].name;
             }
             }
         }
 
-        // Check for: return () => { document.removeEventListener(...) }
+        // does useEffect have document.removeEventListener
         if (stmt.type === "ReturnStatement") {
             const fn = stmt.argument;
 
@@ -77,6 +76,7 @@ function detectShortcuts(content) {
             for (const cleanupStmt of fn.body.body) {
                 const expr = cleanupStmt.type === "ExpressionStatement" && cleanupStmt.expression;
 
+                // checks for document.removeEventListener("keydown", handler)
                 if (
                 expr?.type === "CallExpression" &&
                 expr.callee?.type === "MemberExpression" &&
@@ -100,7 +100,7 @@ function detectShortcuts(content) {
 
         const line = path.node.loc?.start.line ?? 1;
 
-        // Keyboard handling in useEffect but no keydown listener event found, warn
+        // any keyboard handling in useEffect but no keydown listener event found, warn
         if (intendedShortcut && !hasAddKeyListener) {
           const line = path.node.loc?.start.line ?? 1;
           feedback.push({
@@ -114,6 +114,7 @@ function detectShortcuts(content) {
           });
         }
 
+        // has addEventListener but no removeEventListener in cleanup, warn
         if (hasAddKeyListener && !hasRemoveKeyListener) {
         feedback.push({
           type: "missing-remove-keydown",
@@ -132,7 +133,7 @@ function detectShortcuts(content) {
   });
 
   // Regex-based menu/nav shortcut hint detection
-
+  // Looks for <nav> or <menu> blocks with action keywords but no visible shortcut hints like "Ctrl+S"
   const shortcutRegex = /\b(Ctrl|Cmd|⌘|Alt|Option|Shift)\s*\+?\s*\w+/i;
   const navOrMenuBlocks = [...content.matchAll(/<(nav|link|menu)[^>]*>([\s\S]*?)<\/\1>/gi)];
 
@@ -148,6 +149,7 @@ function detectShortcuts(content) {
     const containsKeyword = keywords.some((word) => lower.includes(word));
     const hasShortcutHint = shortcutRegex.test(innerContent);
 
+    // if it has action keywords but no shortcut hints, warn
     if (containsKeyword && !hasShortcutHint) {
       feedback.push({
         type: "missing-shortcut-hint",

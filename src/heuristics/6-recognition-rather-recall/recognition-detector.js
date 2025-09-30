@@ -9,25 +9,25 @@ function detectRecognitionCues(content) {
 
   const criticalInputTypes = ["tel", "date", "number", "email", "url", "password", "phone"];
 
-  // helper to count menu items li, a, button recursively
+  // Helper: to count menu items li, a, button recursively
   function countMenuItemsRecursively(children) {
   let count = 0;
 
-  // Iterate through children nodes
+  // iterate through children nodes
   for (const child of children) {
     if (!child || child.type !== "JSXElement") continue;
 
-    // Get the tag name of the child element
+    // get the tag name of the child element
     const tag = child.openingElement?.name?.type === "JSXIdentifier"
       ? child.openingElement.name.name.toLowerCase()
       : "";
 
-    // Count a, li, button as menu items
+    // count a, li, button as menu items
     if (["a", "button", "link", "route"].includes(tag)) {
       count++;
     }
 
-    // Recurse into child elements
+    // recurse into child elements
     if (Array.isArray(child.children)) {
       count += countMenuItemsRecursively(child.children);
     }
@@ -36,7 +36,7 @@ function detectRecognitionCues(content) {
   return count;
   }
 
-  // helper to check if nav or menu exists recursively
+  // Helper: check if nav or menu exists recursively
   function hasNavOrMenuRecursively(children) {
     for (const c of children) {
       if (c?.type !== "JSXElement") continue;
@@ -49,7 +49,7 @@ function detectRecognitionCues(content) {
 
       if (["nav", "menu"].includes(childTag)) return true;
 
-      // Rekursiv in die Kinder gehen
+      // recursive check children
       if (Array.isArray(c.children) && hasNavOrMenuRecursively(c.children)) {
         return true;
       }
@@ -82,7 +82,7 @@ function detectRecognitionCues(content) {
       const children = Array.isArray(node.children) ? node.children : [];
       const line = node.loc?.start?.line ?? null;
 
-      // 1. Input types that need placeholders
+      // Critical input types need placeholders
       if (tag === "input") {
         const typeAttr = opening.attributes.find(
           (attr) =>
@@ -113,12 +113,11 @@ function detectRecognitionCues(content) {
         }
       }
 
-      // 2. nav/menu overloaded
+      // More than 7 items in nav/menu is considered overloaded
       if (["nav", "menu", "routes"].includes(tag)) {
-        // Counts how many direct child elements inside are also <nav> or <menu>
+        // counts how many direct child elements inside are also <nav> or <menu>
         const itemCount = countMenuItemsRecursively(children);
 
-        // More than 7 items is considered overloaded
         if (itemCount > 7) {
           feedback.push({
             type: "nav-overloaded",
@@ -131,7 +130,7 @@ function detectRecognitionCues(content) {
         }
       }
 
-      // 3. nav/menu inside footer
+      // Is <nav> or <menu> inside footer
       if (tag === "footer") {
         const hasNav = hasNavOrMenuRecursively(children);
 
@@ -145,14 +144,16 @@ function detectRecognitionCues(content) {
         }
       }
 
-      // 4. submenus without caret icon
+      // Submenus with missing caret or arrow icons
       if (tag === "li") {
+        // check if <li> has nested <ul> or <menu>
         const hasNested = children.some(
           (c) =>
             c?.type === "JSXElement" && c?.openingElement?.name?.type === "JSXIdentifier" &&
             ["ul", "menu"].includes(c.openingElement?.name?.name)
         );
 
+        // check for common arrow/caret icon components
         const hasIcon = children.some(
           (c) =>
             c?.type === "JSXElement" && c?.openingElement?.name?.type === "JSXIdentifier" &&

@@ -16,7 +16,7 @@ function detectErrorPrevention(content) {
   const contextualFields = ["select", "dropdown", "checkboxgroup", "radiogroup", "upload", "filepicker"];
   const userErrorFeedback = /(set|show|get)?(Error|Toast|Alert|Message|Snackbar)/i;
 
-  // helper to extract text from JSX nodes
+  // Helper: extract text from JSX nodes for techncial error phrasing
   function getTextFromJSX(node) {
     if (node.type === "JSXText") return node.value.toLowerCase().trim();
     if (node.type === "JSXElement" && node.children) {
@@ -25,7 +25,7 @@ function detectErrorPrevention(content) {
     return "";
   }
 
-  // helper to check if an undo option exists among siblings (like "Undo" button or text)
+  // Helper: check if an undo option exists among siblings (like "Undo" button or text)
   function hasUndoSibling(path) {
     const parent = path.parentPath;
     if (!parent || !parent.node || !parent.node.children) return false;
@@ -42,7 +42,7 @@ function detectErrorPrevention(content) {
     });
     }
 
-    // helper determines if a node is a fetch or axios call
+    // Helper: determine if a node is a fetch or axios call
     function isNetworkCall(node) {
     if (!node || node.type !== "CallExpression") return false;
 
@@ -63,7 +63,7 @@ function detectErrorPrevention(content) {
     return false;
     }
 
-    // helper checks if node is inside a try-catch
+    // Helper: check if node is inside a try-catch
     function isInsideTryCatch(path) {
     return path.findParent(p => 
         p &&
@@ -72,14 +72,14 @@ function detectErrorPrevention(content) {
         p.isTryStatement());
     }
 
-    // helper to detects if a path is followed by a `.catch(...)`
+    // Helper: detects if a path is followed by a `.catch(...)`
     function findCatchHandler(path) {
     let current = path;
 
     while (current) {
         const node = current.node;
 
-        // Looks for: .catch(...)
+        // looks for: .catch(...)
         if (
         node?.type === "CallExpression" &&
         node.callee?.type === "MemberExpression" &&
@@ -95,7 +95,7 @@ function detectErrorPrevention(content) {
     return null;
     }
 
-    // helper determines if the code block only contains dev feedback (console.log/error)
+    // Helper: if code block only contains dev feedback (console.log/error)
     function isDevOnlyFeedback(node) {
     if (!node || node.type !== "ExpressionStatement") return false;
 
@@ -117,11 +117,11 @@ function detectErrorPrevention(content) {
     return false;
     }
 
-    // helper checks if the code has meaningful user-facing feedback
+    // Helper: check if the code has meaningful user-facing feedback
     function isUserFeedback(node) {
     if (!node) return false;
 
-    // Statement like setError("...") or showToast(...)
+    // statements like setError("...") or showToast(...) should be present
     if (
         node.type === "ExpressionStatement" &&
         node.expression?.type === "CallExpression"
@@ -137,7 +137,7 @@ function detectErrorPrevention(content) {
         }
     }
 
-    // JSX return like: return <Error />
+    // Detect <Error />, <Toast />, <Alert /> components
     if (
         node.type === "ReturnStatement" &&
         node.argument?.type === "JSXElement"
@@ -149,7 +149,7 @@ function detectErrorPrevention(content) {
     return false;
     }
 
-    // helper extracts feedback for catch blocks or .catch handlers
+    // Helper: extract feedback for catch blocks or .catch handlers
     function analyzeErrorHandlerCatchStatements(statements, line, feedback) {
     const onlyDevLogs = statements.length > 0 && statements.every(isDevOnlyFeedback);
     const hasUserFeedback = statements.some(isUserFeedback);
@@ -193,7 +193,7 @@ function detectErrorPrevention(content) {
       const buttonText = getTextFromJSX(node);
 
       if (destructiveWords.test(buttonText)) {
-        // Check for undo/restore nearby
+        // check for undo/restore nearby
         if (!hasUndoSibling(path)) {
           feedback.push({
             type: "missing-undo-option",
@@ -207,10 +207,11 @@ function detectErrorPrevention(content) {
       }
     }
 
-      // 1. Detect confirmation dialog with destructive language
+      // Detect dialog with destructive language but no cancel option
       if (modalLikeTags.includes(tag.toLowerCase())) {
         if (confirmationWords.test(content)) {
 
+          // check if cancel option exists in children
           const hasCancelOption = children.some(
             (c) =>
               c.type === "JSXElement" &&
@@ -236,7 +237,7 @@ function detectErrorPrevention(content) {
         }
       }
 
-      // 2. Detect select or custom fields missing hints
+      // Select or custom fields missing hints
       if (contextualFields.includes(tag.toLowerCase())) {
         const hasTooltipAttr = path.node.openingElement.attributes.some(
           (attr) =>
@@ -259,7 +260,7 @@ function detectErrorPrevention(content) {
 
     },
     
-    // 3. Detect fetch/axios calls without proper error handling
+    // Detects fetch/axios calls without proper error handling missing catch or try-catch
     CallExpression(path) {
     const node = path.node;
     if (!isNetworkCall(node)) return;
@@ -282,7 +283,7 @@ function detectErrorPrevention(content) {
         return;
     }
 
-    // Analyze .catch(fn) if present
+    // analyze .catch(fn) if present
     if (catchPath?.node?.arguments?.length > 0) {
         const handler = catchPath.node.arguments[0];
 
@@ -294,7 +295,7 @@ function detectErrorPrevention(content) {
             const statements = handler.body.body;
             analyzeErrorHandlerCatchStatements(statements, handler.loc?.start?.line, feedback);
         } else {
-            // One-liner: e => console.log(e)
+            // e => console.log(e)
             analyzeErrorHandlerCatchStatements(
             [{ type: "ExpressionStatement", expression: handler.body }],
             handler.loc?.start?.line,
@@ -305,7 +306,7 @@ function detectErrorPrevention(content) {
     }
     },
 
-    // Analyze try-catch blocks for dev-only error handling
+    // Analyze try-catch blocks for dev-only error handling usign console.logs
     CatchClause(path) {
     const catchBody = path.node.body?.body ?? [];
     const line = path.node.loc?.start?.line ?? null;
@@ -317,7 +318,7 @@ function detectErrorPrevention(content) {
         feedback.push({
         type: "dev-only-error-handling",
         line,
-        message: `Catch block only logs errors using console.log or console.error. Consider providing user-facing feedback.`,
+        message: `Catch block only logs errors using console.log. Consider providing user-facing feedback.`,
         severity: "warning",
         why: "This provides no feedback to users when an error occurs.",
         action: "Consider displaying user feedback (e.g. setError, <Error />)",
@@ -325,7 +326,7 @@ function detectErrorPrevention(content) {
     }
     },
 
-    // Warn if try block is missing a catch handler
+    // Warns if try block is missing a catch handler
     TryStatement(path) {
     const node = path.node;
     const hasCatch = Boolean(node.handler);

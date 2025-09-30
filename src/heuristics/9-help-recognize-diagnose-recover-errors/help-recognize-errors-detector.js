@@ -10,7 +10,7 @@ function detectHelpErrorRecognition(content) {
 
   const technicalErrorRegex = /\b(error\s*\d{3,4}|api error|err_?[a-z0-9_]+|code\s*\d+|network error|request failed|failed to fetch)\b/i;
 
-  // helper to extract all text from a JSX subtree
+  // Helper: to extract all text from jsx elements
   function extractJSXText(node) {
     if (node.type === "JSXText") return node.value;
     if (node.type === "JSXElement" && node.children) {
@@ -42,7 +42,7 @@ function detectHelpErrorRecognition(content) {
 
       const attrs = opening?.attributes ?? [];
 
-      // Determine if this is an "error-like" component or styled that way
+      // Determine if this is an "error-like" component and styled that way
       const isErrorComponent = ["error", "alert", "message", "notification", "errormessage", "formerror"].includes(tagName.toLowerCase());
 
       const classAttr = attrs.find(
@@ -56,7 +56,7 @@ function detectHelpErrorRecognition(content) {
 
       const isErrorClass = /(error|alert|danger|fail|invalid|warning|notice|msg|feedback)[-_]?/i.test(classNameVal);
 
-      // Inline style check
+      // Search inline style attributes
       const styleAttr = attrs.find(
         (attr) =>
           attr.type === "JSXAttribute" &&
@@ -72,7 +72,7 @@ function detectHelpErrorRecognition(content) {
       styleAttr.value?.type === "JSXExpressionContainer" &&
       styleAttr.value.expression?.type === "ObjectExpression"
     ) {
-    // Check for color: 'red' or fontWeight: 'bold' in style object    
+    // Check for color: 'red'  
     hasRedStyle = styleAttr.value.expression.properties.some(
     (prop) =>
         prop.type === "ObjectProperty" &&
@@ -84,6 +84,7 @@ function detectHelpErrorRecognition(content) {
         /red/i.test(prop.value.value)
     );
 
+    // Check for fontWeight: 'bold' or 700, 800, 900
     hasBoldStyle = styleAttr.value.expression.properties.some(
     (prop) =>
         prop.type === "ObjectProperty" &&
@@ -98,10 +99,11 @@ function detectHelpErrorRecognition(content) {
 
     const text = extractJSXText(node);
 
+    // Compare if text has technical error message
     const matchesTechnical = technicalErrorRegex.test(text);
 
     if (isErrorComponent || isErrorClass || hasRedStyle || matchesTechnical) {
-        // 1. If technical error phrasing is used
+        // If technical error phrasing is used, warn
         if (matchesTechnical) {
           feedback.push({
             type: "technical-error-message",
@@ -115,7 +117,7 @@ function detectHelpErrorRecognition(content) {
 
     if (isErrorComponent || isErrorClass || hasRedStyle || matchesTechnical) {
 
-      // 2. If there is no visual indication of an error
+      // If there is no visual indication of an error, warn
       const hasVisualIndicator = isErrorClass || hasRedStyle || hasBoldStyle;
 
       if (!hasVisualIndicator) {

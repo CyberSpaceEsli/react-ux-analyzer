@@ -3,9 +3,8 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 
 /**
- * Detects missing breadcrumbs in critical page components.
+ * detectBreadcrumbs - Detects missing breadcrumbs in critical page components <Page>, <Layout>, <Main>.
  * Heuristic: Nielsen #1 - Visibility of system status
- * Breadcrumbs help users understand where they are in the application.
  */
 function detectBreadcrumbs(content) {
   const pageComponents = ["page", "layout", "main"];
@@ -28,14 +27,14 @@ function detectBreadcrumbs(content) {
   function hasBreadcrumb(node) {
     if (!node) return false;
 
-    // JSX Component check
+    // check if element or its children is a breadcrumb component
     if (node.type === "JSXElement") {
       const name = node.openingElement.name;
       if (name.type === "JSXIdentifier" && breadcrumbComponents.includes(name.name.toLowerCase())) {
         return true;
       }
 
-      // HTML attribute check
+      // check for HTML-like breadcrumb patterns in attributes
       for (const attr of node.openingElement.attributes || []) {
         if (attr.type === "JSXAttribute" && attr.name && attr.value) {
           const str = attr.value.type === "StringLiteral"
@@ -47,18 +46,18 @@ function detectBreadcrumbs(content) {
         }
       }
 
-      // Recursively check children
+      // recursively check children
       return (node.children || []).some(hasBreadcrumb);
     }
 
     return false;
   }
 
-  // Traverse AST
   traverse(ast, {
     JSXElement(path) {
       const name = path.node.openingElement.name;
       if (name.type === "JSXIdentifier" && pageComponents.includes(name.name.toLowerCase())) {
+        // when breadcrumb is missing push feedback
         if (!hasBreadcrumb(path.node)) {
           feedback.push({
             type: "missing-breadcrumb",

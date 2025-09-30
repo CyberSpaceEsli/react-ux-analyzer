@@ -21,6 +21,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
   const styleMap = new Map();
   let primaryColorLine = null;
 
+  // Helper: extract visual styles from className and style attributes from clickable and non-clickable elements and get used colors
   function extractVisualStyles(attributes) {
     const styles = { classes: [], inlineColors: [] };
 
@@ -33,6 +34,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
         }
       }
 
+      // inline style extraction for color properties
       if (attr.name.name === "style") {
         const expr = attr.value?.expression;
         if (expr?.type === "ObjectExpression") {
@@ -79,6 +81,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
 
       const styles = extractVisualStyles(attributes);
 
+      // collect colors from tailwind classes and inline styles
       styles.classes.forEach((cls) => {
         const match = cls.match(colorRegex);
         if (match) match.forEach((m) => {
@@ -87,11 +90,13 @@ async function detectAestheticMinimalism(content, overrideUrl) {
         });
       });
 
+      // collect inline colors
       styles.inlineColors.forEach((color) => {
         if (!primaryColorLine) primaryColorLine = line;
         inlineColorSet.add(color);
       });
 
+      // create a unique key for the visual style based on className and style attributes
       for (const attr of attributes) {
         if (attr.type === 'JSXAttribute') {
           if (attr.name.name === 'className' && attr.value?.type === 'StringLiteral') {
@@ -99,17 +104,18 @@ async function detectAestheticMinimalism(content, overrideUrl) {
             className = 'tw:' + classes.join('|');
           }
 
+          // inline style object mapping to key
           if (attr.name.name === 'style' && attr.value?.type === 'JSXExpressionContainer') {
             const expr = attr.value.expression;
             if (expr.type === 'ObjectExpression') {
               const props = expr.properties.map(p => {
                 if (p.type === 'ObjectProperty') {
-                  // Type-safe extraction for key
+                  // key extraction
                   let key = '';
                   if (p.key && p.key.type === 'Identifier' && typeof p.key.name === 'string') key = p.key.name;
                   else if (p.key && p.key.type === 'StringLiteral' && typeof p.key.value === 'string') key = p.key.value;
 
-                  // Type-safe extraction for value
+                  // value extraction
                   let value = '';
                   if (p.value && p.value.type === 'StringLiteral' && typeof p.value.value === 'string') value = p.value.value;
 
@@ -121,12 +127,14 @@ async function detectAestheticMinimalism(content, overrideUrl) {
             }
           }
 
+          // check if element is clickable
           if (attr.name.name === 'onClick' || attr.name.name === 'href') {
             isClickable = true;
           }
         }
       }
 
+      // also consider tag names for clickable elements
       const tag = tagName.toLowerCase();
       if (["a", "button"].includes(tag)) {
         isClickable = true;
@@ -141,7 +149,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
 
   });
 
-  // Check for too many primary colors used
+  // If too many primary colors used, warn
   const totalColorsUsed = new Set([...tailwindColorSet, ...inlineColorSet]);
   if (totalColorsUsed.size > 3 && primaryColorLine) {
     feedback.push({
@@ -154,7 +162,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
     });
   }
 
-  // Check for clickable vs non-clickable elements sharing the same visual style
+  // When clickable vs non-clickable elements share the same visual style, warn
   for (const [visualKey, elements] of styleMap.entries()) {
     const hasClickable = elements.some(e => e.isClickable);
     const hasNonClickable = elements.some(e => !e.isClickable);
@@ -172,17 +180,18 @@ async function detectAestheticMinimalism(content, overrideUrl) {
     }
   }
 
-  // DOM-based analysis for whitespace with image-js
+  // DOM-based analysis for whitespace calculation with image-js
   const url = overrideUrl || process.env.REACT_APP_URL || 'http://localhost:3000';
 
   const utilsDir = path.resolve(__dirname, 'utils');
   if (!fs.existsSync(utilsDir)) fs.mkdirSync(utilsDir, { recursive: true });
 
-  // Path for temporary screenshot and mask files
+  // Path for temporary screenshot and mask files in utils fodler
   const screenshotPath = require('path').join(__dirname, 'utils', 'screenshot.png');
   const maskPath = path.join(utilsDir, 'mask.json');
   const debugImagePath = path.join(utilsDir, 'debug-whitespace.png');
 
+  // start puppeteer to screenshot and dom analysis
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
 
@@ -192,7 +201,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
   const layoutHeight = await page.evaluate(() => document.documentElement.scrollHeight);
   await page.setViewport({ width: 1280, height: layoutHeight });
 
-  // Analyze DOM layout and highlight element areas
+  // analyze DOM layout and extract element areas
   const { boxes, layoutWidth, layoutHeight: measuredHeight } = await page.evaluate(() => {
     const selectors = [
       'img', 'video', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -203,6 +212,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
       Array.from(document.querySelectorAll(selector))
     );
 
+    // get bounding rects for each element
     const rects = elements.map(el => {
       const rect = el.getBoundingClientRect();
       return {
@@ -228,21 +238,25 @@ async function detectAestheticMinimalism(content, overrideUrl) {
   await page.screenshot({ path: screenshotPath });
   await browser.close();
 
-  // Save mask.json and debug image for whitespace visualization
+  // Write element heights and widths to mask.json
   fs.writeFileSync(maskPath, JSON.stringify({ boxes, layoutHeight: measuredHeight }, null, 2));
-  // Draw rectangles on the screenshot for visual debugging
+  // Draw rectangles on debug screenshot for visual debugging
   await drawElementAreas(screenshotPath, maskPath, debugImagePath);
 
+  // Get total area of elements vs total layout area
   const layoutArea = layoutWidth * measuredHeight;
   const elementArea = boxes.reduce((sum, box) => {
     const area = box.width * box.height;
+    // Elements with very small area (less than 5px) are ignored
     return sum + (area > 5 ? area : 0);
   }, 0);
 
   // Calculate whitespace ratio sets elements area in ratio to total layout area
+  // (elementArea / layoutArea) gives the ratio of area covered by elements
+  // 1 - (elementArea / layoutArea) gives the ratio of whitespace area
   const whitespaceRatio = 1 - (elementArea / layoutArea);
 
-  // Warn about low whitespace ratio
+  // If low whitespace ratio, warn
   if (whitespaceRatio < 0.2) { // Less than 20% of layout area is whitespace
     feedback.push({
       type: 'low-whitespace',

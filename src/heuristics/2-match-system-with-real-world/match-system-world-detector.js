@@ -1,14 +1,14 @@
 const { checkForJargon } = require("./language-analyzer.js");
 
 /**
- * detectMatchSystemwithRealWorld - Detects internal or technical jargon in UI text elements.
+ * detectMatchSystemwithRealWorld - Detects internal or technical jargon in UI text elements with LLM.
  * Heuristic: Nielsen #2 - Match between system and the real world
- * Jargon can confuse users and hinder usability.
  */
 
 async function detectMatchSystemwithRealWorld(visibleText, apiKey, domain = 'general') {
     const feedback = [];
-    const seenJargon = new Set(); // track actual jargon matches, not whole text lines
+    // tracks actual jargon matches from extractVisibleText
+    const seenJargon = new Set();
 
     for (const { text, line } of visibleText) {
         if (typeof text !== 'string') continue;
@@ -16,6 +16,7 @@ async function detectMatchSystemwithRealWorld(visibleText, apiKey, domain = 'gen
         if (textLine.length < 3) continue;
 
         try {
+            // call LLM to check for jargon words/phrases
             const result = await checkForJargon(textLine, apiKey, domain);
             if (result) {
                 const matches = result.split('\n').filter(Boolean);

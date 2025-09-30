@@ -20,7 +20,7 @@ function detectHelpFeatures(content) {
   const iconTags = /icon|svg/i;
   const tooltipTags = ["Tooltip", "Hint", "Help", "Info"];
 
-      // helper to collect all text from JSX children
+      // Helper: collect all text from jsx elements recursively
       function collectJSXText(node) {
       let text = '';
       if (node.type === 'JSXText') text += node.value;
@@ -30,7 +30,7 @@ function detectHelpFeatures(content) {
       return text;
     }
 
-    // helper to check if an action button exists in onboarding modals
+    // Helper: check if an action button exists in onboarding modals
     function hasActionButton(node) {
       if (node.type === "JSXElement") {
         const childName = node.openingElement?.name;
@@ -41,10 +41,11 @@ function detectHelpFeatures(content) {
               ?.filter((c) => c?.type === "JSXText")
               .map((t) => t.value.toLowerCase())
               .join(" ");
+            // compare against onboarding texts
             if (onboardingButtonRegex.test(buttonText)) return true;
           }
         }
-        // Recursively check children
+        // recursively check children
         if (node.children) {
           for (const child of node.children) {
             if (hasActionButton(child)) return true;
@@ -54,13 +55,13 @@ function detectHelpFeatures(content) {
       return false;
     }
 
-    // helper to check if a child is an icon element
+    // Helper: check if child is icon element
     function isIconElement(child) {
     if (child.type !== "JSXElement") return false;
     const name = child.openingElement.name;
     if (name.type === "JSXIdentifier" && iconTags.test(name.name)) return true;
 
-    // Check for className containing "icon"
+    // check for className containing "icon"
     const attrs = child.openingElement.attributes || [];
     for (const attr of attrs) {
       if (attr.type === "JSXAttribute" && attr.name.name === "className" && attr.value?.type === "StringLiteral") {
@@ -70,7 +71,7 @@ function detectHelpFeatures(content) {
     return false;
   }
 
-  // helper to check if a button is icon-only
+  // Helper: check if a button is icon-only
   function isIconOnlyButton(node) {
     if (node.type !== "JSXElement") return false;
     const name = node.openingElement.name;
@@ -83,21 +84,20 @@ function detectHelpFeatures(content) {
     const hasText = children.some(child => child.type === "JSXText" && child.value.trim());
     if (hasText) return false;
 
-    // Use regex/className matching for icon children
+    // uses regex/className matching for icon children
     const hasIconChild = children.some(isIconElement);
 
     return hasIconChild && !hasText;
   }
 
-  // helper to check if a node has accessible label attributes
+  // Helper: check if a node has accessible label attributes
   function hasTitleAccessibleLabel(node) {
-    // Check for aria-label or title attribute
+    // check for aria-label or title attribute
     const attrs = node.openingElement.attributes || [];
     for (const attr of attrs) {
       if (attr.type !== "JSXAttribute" || !attr.name) continue;
       const attrName = attr.name.name;
-      if (["aria-label", "title"].includes(attrName)) {
-        // Must have a value
+      if (["aria-label", "title"].includes(attrName)) { 
         if (attr.value && ((attr.value.type === "StringLiteral" && attr.value.value.trim()) ||
             (attr.value.type === "JSXExpressionContainer"))) {
           return true;
@@ -107,7 +107,7 @@ function detectHelpFeatures(content) {
     return false;
   }
 
-  // helper to check if a node is wrapped in a Tooltip component
+  // Helper: check if a icon button is wrapped in a tooltip component
   function isWrappedInTooltip(path) {
     let parent = path.parentPath;
     while (parent) {
@@ -150,7 +150,7 @@ function detectHelpFeatures(content) {
      
       const line = el.loc?.start?.line ?? null;
 
-      // 1. MODALS / DIALOGS — onboarding content but no start button
+      // Modal or Dialog components have onboarding content but no start button
       const isModalComponent = modalLikeTags.includes(tag);
 
       if (isModalComponent) {
@@ -170,7 +170,7 @@ function detectHelpFeatures(content) {
       }
     }
 
-      // 2. NAV / MENU — should include help/support links
+      // Nav and Menu components do not include help/support links
       if (["nav", "menu"].includes(tag)) {
         const hasHelpLink = children.some((child) => {
           if (child?.type !== "JSXElement") return false;
@@ -188,7 +188,7 @@ function detectHelpFeatures(content) {
           );
         });
 
-        // If no help/support link is found in nav/menu
+        // If no help/support link is found in nav/menu, warn
         if (!hasHelpLink) {
           feedback.push({
             type: "missing-help-link-in-menu",
@@ -201,13 +201,13 @@ function detectHelpFeatures(content) {
         }
       }
 
-      // 3. INPUT / TEXTAREA / SELECT / BUTTON are missing help attributes (title, aria-label, data-tooltip)
+      // Action elements are missing help attributes (title, aria-label, data-tooltip)
       const attrs = Array.isArray(opening.attributes)
         ? opening.attributes
         : [];
 
       if (["input", "textarea", "select", "button"].includes(tag)) {
-        // Extract type="..." attribute if present
+        // extract type="..." attribute if present
         const typeAttr = attrs.find(
           (attr) =>
             attr?.type === "JSXAttribute" &&
@@ -224,7 +224,7 @@ function detectHelpFeatures(content) {
 
         if (!needsHelp) return;
 
-        // Check for help attributes
+        // check for help attributes
         const hasHelpAttr = attrs.some(
           (attr) =>
             attr?.type === "JSXAttribute" &&
@@ -232,6 +232,7 @@ function detectHelpFeatures(content) {
             ["title", "aria-label", "data-tooltip"].includes(attr.name.name)
         );
 
+        // If critical input/button is missing help attribute, warn
         if (!hasHelpAttr) {
           feedback.push({
             type: "missing-tooltip",
@@ -244,7 +245,7 @@ function detectHelpFeatures(content) {
         }
       }
 
-      // 4. ICON-ONLY BUTTONS — must have aria-label/title or be wrapped in Tooltip
+      // Icon-only buttons must have aria-label/title or be wrapped in Tooltip
       if (isIconOnlyButton(el)) {
       const line = el.loc?.start?.line || null;
       if (!hasTitleAccessibleLabel(el) && !isWrappedInTooltip(path)) {
