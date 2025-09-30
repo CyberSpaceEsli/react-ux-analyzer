@@ -12,138 +12,71 @@ const { extractVisibleTextFromCode } = require('./src/heuristics/utils/extractVi
 const { runVisualQualityCheck } = require('./src/visual-quality-analysis');
 const { loadCustomRules } = require('./src/heuristics/utils/load-custom-rules');
 
+let feedbackHandler;
+let detectors;
+
 async function usabilityAnalyzeReactFiles() {
-  const feedbackHandler = new FeedbackHandler();
-
-  // Only scan src folder for JSX files
-  const files = await vscode.workspace.findFiles('src/**/*.{jsx}');
-
-  if (files.length === 0) {
-    vscode.window.showInformationMessage('No React source files found in the src folder.');
-    return;
-  }
-
-  for (const file of files) {
-    const document = await vscode.workspace.openTextDocument(file);
-    const content = document.getText();
-    const fileName = document.fileName;
-
-    try {
-      // --- Breadcrumb detector ---
-      const issues = detectBreadcrumbs(content);
-
-      if (issues.length > 0) {
-        feedbackHandler.showResults(fileName, issues.map(issue => ({
-          ...issue,
-          analysisType: 'BREADCRUMB'
-        })));
+  await vscode.window.withProgress({
+    location: vscode.ProgressLocation.Notification,
+    title: "Scanning React files for UX issues...",
+    cancellable: false
+  }, async () => {
+    feedbackHandler.clearAll();
+    let totalIssues = 0;
+    const files = await vscode.workspace.findFiles('**/*.jsx', '**/node_modules/**');
+    for (const file of files) {
+      const document = await vscode.workspace.openTextDocument(file);
+      const content = document.getText();
+      const fileName = document.fileName;
+      try {
+        let fileIssues = [];
+        for (const detector of detectors) {
+          let issues = [];
+          try {
+            issues = await detector.fn(content);
+          } catch (err) {
+            console.error(`❌ Detector "${detector.type}" failed:`, err);
+          }
+          if (issues.length > 0) {
+            totalIssues += issues.length;
+            fileIssues.push(...issues.map(issue => ({
+              ...issue,
+              analysisType: detector.type
+            })));
+          }
+        }
+        feedbackHandler.showResults(fileName, fileIssues);
+      } catch (err) {
+        console.error(`❌ General analysis error for ${fileName}:`, err);
       }
-
-    // --- Loading detector ---
-    const loadingIssues = detectLoadingPatterns(content);
-    if (loadingIssues.length > 0) {
-      feedbackHandler.showResults(
-        fileName,
-        loadingIssues.map(issue => ({ ...issue, analysisType: 'LOADING' }))
-      );
-    }
-
-    // --- Match System with Real World detector ---
-    const matchSystemIssues = await detectMatchSystemwithRealWorld(content);
-    if (matchSystemIssues.length > 0) {
-      feedbackHandler.showResults(
-        fileName,
-        matchSystemIssues.map(issue => ({ ...issue, analysisType: 'MATCH_SYSTEM_REAL_WORLD' }))
-      );
     }
     
-    // --- Control Exit detector ---
-    const controlExitIssues = detectControlExits(content);
-    if (controlExitIssues.length > 0) {
-      feedbackHandler.showResults(
-        fileName,
-        controlExitIssues.map(issue => ({ ...issue, analysisType: 'CONTROL' }))
-      );
-    }
-    // --- Page Consistency detector ---
-    const consistencyIssues = detectPageConsistency(content);
-    if (consistencyIssues.length > 0) {
-      feedbackHandler.showResults(
-        fileName,
-        consistencyIssues.map(issue => ({ ...issue, analysisType: 'CONSISTENCY' }))
-      );
-    }
-
-    // --- Error Prevention detector ---
-    const errorPreventionIssues = detectErrorPrevention(content);
-    if (errorPreventionIssues.length > 0) {
-      feedbackHandler.showResults(
-        fileName,
-        errorPreventionIssues.map(issue => ({ ...issue, analysisType: 'ERROR_PREVENTION' }))
-      );
-    }
-
-    // --- Recognition Cues detector ---  
-    const recognitionIssues = detectRecognitionCues(content); 
-    if (recognitionIssues.length > 0) {
-      feedbackHandler.showResults(
-        fileName,
-        recognitionIssues.map(issue => ({ ...issue, analysisType: 'RECOGNITION' }))
-      );
-    }
-
-    // --- Shortcuts detector ---
-    const  shortcutIssues = detectShortcuts(content);
-    if (shortcutIssues.length > 0) {
-      feedbackHandler.showResults(
-        fileName,
-        shortcutIssues.map(issue => ({ ...issue, analysisType: 'FLEXIBILITY_EFFICIENCY' }))
-      );
-    }
-
-    // --- Aesthetic Minimalism detector ---
-    const aestheticIssues = await detectAestheticMinimalism(content);
-    if (aestheticIssues.length > 0) {
-      feedbackHandler.showResults(
-        fileName,
-        aestheticIssues.map(issue => ({ ...issue, analysisType: 'AESTHETIC_MINIMALISM' }))
-      );
-    }
-
-    // --- Help Error Recognition detector ---
-    const helpErrorIssues = detectHelpErrorRecognition(content);
-    if (helpErrorIssues.length > 0) {
-      feedbackHandler.showResults(
-        fileName,
-        helpErrorIssues.map(issue => ({ ...issue, analysisType: 'ERROR_RECOVERY' }))
-      );
-    }
-
-    // --- Help Features detector ---
-    const helpIssues = detectHelpFeatures(content);
-    if (helpIssues.length > 0) {
-      feedbackHandler.showResults(
-        fileName,
-        helpIssues.map(issue => ({ ...issue, analysisType: 'HELP' }))
-      );
-    }
-
-    // Add more Detectors here...
-
-    } catch (err) {
-      console.error(`Error running Breadcrumb detector on ${fileName}:`, err);
-    }
-  }
-
-  vscode.window.showInformationMessage(`✅ React UX Analyzer finished scanning ${files.length} file(s) in src.`);
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    vscode.window.showInformationMessage(`✅ React UX Analyzer found ${totalIssues} issue(s).`);
+  });
 }
 
 function activate(context) {
   console.log('🚀 React UX Analyzer extension is active!');
   vscode.window.showInformationMessage('✅ React UX Analyzer loaded!');
 
-  const feedbackHandler = new FeedbackHandler();
+  feedbackHandler = new FeedbackHandler();
   const secretStorage = context.secrets;
+
+  detectors = [
+    { fn: detectBreadcrumbs, type: 'BREADCRUMB' },
+    { fn: detectLoadingPatterns, type: 'LOADING' },
+    { fn: detectControlExits, type: 'CONTROL' },
+    { fn: detectPageConsistency, type: 'CONSISTENCY' },
+    { fn: detectErrorPrevention, type: 'ERROR_PREVENTION' },
+    { fn: detectRecognitionCues, type: 'RECOGNITION' },
+    { fn: detectShortcuts, type: 'FLEXIBILITY_EFFICIENCY' },
+    { fn: detectHelpErrorRecognition, type: 'ERROR_RECOVERY' },
+    { fn: detectHelpFeatures, type: 'HELP' }
+    // async functions
+    /*{fn: detectMatchSystemwithRealWorld, type: 'MATCH_SYSTEM_REAL_WORLD'}*/
+    /*{fn: detectAestheticMinimalism, type: 'AESTHETIC_MINIMALISM'}*/
+  ];
 
   // Command: Set OpenRouter API Key
   vscode.commands.registerCommand('react-ux-analyzer.setApiKey', async () => {
@@ -175,6 +108,8 @@ function activate(context) {
       return;
     }
 
+    feedbackHandler.clearAll();
+
     const document = editor.document;
     const content = document.getText();
     const fileName = document.fileName;
@@ -199,6 +134,8 @@ function activate(context) {
       vscode.window.showErrorMessage('❌ Please open a file first!');
       return;
     }
+
+    feedbackHandler.clearAll();
 
     const document = editor.document;
     const content = document.getText();
@@ -233,6 +170,7 @@ function activate(context) {
     }
 
     const availableDomains = ['health', 'legal', 'finance', 'e-commerce', 'information technology', 'education'];
+    feedbackHandler.clearAll();
 
     const document = editor.document;
     const content = document.getText();
@@ -305,7 +243,6 @@ function activate(context) {
     );
   });
 
-
   // Command: Analyze Control Exit
   const analyzeControlExitCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeControlExits', () => {
     const editor = vscode.window.activeTextEditor;
@@ -313,6 +250,8 @@ function activate(context) {
       vscode.window.showErrorMessage('❌ Please open a file first!');
       return;
     }
+
+    feedbackHandler.clearAll();
 
     const document = editor.document;
     const content = document.getText();
@@ -339,6 +278,8 @@ function activate(context) {
       return;
     }
 
+    feedbackHandler.clearAll();
+
     const document = editor.document;
     const content = document.getText();
     const fileName = document.fileName;
@@ -363,6 +304,8 @@ function activate(context) {
       vscode.window.showErrorMessage('❌ Please open a file first!');
       return;
     }
+
+    feedbackHandler.clearAll();
 
     const document = editor.document;
     const content = document.getText();
@@ -389,6 +332,8 @@ function activate(context) {
       return;
     }
 
+    feedbackHandler.clearAll();
+
     const document = editor.document;
     const content = document.getText();
     const fileName = document.fileName;
@@ -414,6 +359,8 @@ function activate(context) {
       return;
     }
 
+    feedbackHandler.clearAll();
+
     const document = editor.document;
     const content = document.getText();
     const fileName = document.fileName;
@@ -438,6 +385,8 @@ function activate(context) {
       vscode.window.showErrorMessage('❌ Please open a file first!');
       return;
     }
+
+    feedbackHandler.clearAll();
 
     const document = editor.document;
     const content = document.getText();
@@ -472,6 +421,8 @@ function activate(context) {
       return;
     }
 
+    feedbackHandler.clearAll();
+
     const document = editor.document;
     const content = document.getText();
     const fileName = document.fileName;
@@ -496,6 +447,8 @@ function activate(context) {
       vscode.window.showErrorMessage('❌ Please open a file first!');
       return;
     }
+
+    feedbackHandler.clearAll();
 
     const document = editor.document;
     const content = document.getText();
@@ -592,7 +545,7 @@ function activate(context) {
       );
     });
 
-    // 🔍 Command: Analyze Custom UX Rules
+    // Command: Analyze Custom UX Rules
     const analyzeCustomRulesCommand =  vscode.commands.registerCommand('react-ux-analyzer.analyzeCustomRules', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
@@ -648,15 +601,15 @@ function activate(context) {
     });
   });
 
-  // Project-wide command: Analyze all React files in src folder
+  // Project-wide command: Analyze all React files
   const analyzeProjectCommand = vscode.commands.registerCommand('react-ux-analyzer.usabilityAnalyzeReactFiles', usabilityAnalyzeReactFiles);
 
   // Register all commands
+  context.subscriptions.push(analyzeProjectCommand);
   context.subscriptions.push(analyzeBreadcrumbCommand);
   context.subscriptions.push(analyzeLoadingCommand);
   context.subscriptions.push(analyzeMatchSystemCommand);
   context.subscriptions.push(analyzeControlExitCommand);
-  context.subscriptions.push(analyzeProjectCommand);
   context.subscriptions.push(analyzePageConsistencyCommand);
   context.subscriptions.push(analyzeErrorPreventionCommand);
   context.subscriptions.push(analyzeRecognitionCommand);

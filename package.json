@@ -29,6 +29,11 @@
         "title": "Hello World"
       },
       {
+        "command": "react-ux-analyzer.usabilityAnalyzeReactFiles",
+        "title": "Analyze UX Heuristics (Not #2 & #8)",
+        "category": "React UX Analyzer"
+      },
+      {
         "command": "react-ux-analyzer.analyzeBreadcrumbs",
         "title": "Analyze Breadcrumbs (Nielsen #1: Visibility & System Status)",
         "category": "React UX Analyzer"
