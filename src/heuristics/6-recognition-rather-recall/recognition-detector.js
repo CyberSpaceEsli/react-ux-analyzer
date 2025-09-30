@@ -36,6 +36,27 @@ function detectRecognitionCues(content) {
   return count;
   }
 
+  // helper to check if nav or menu exists recursively
+  function hasNavOrMenuRecursively(children) {
+    for (const c of children) {
+      if (c?.type !== "JSXElement") continue;
+
+      const childOpeningName = c.openingElement?.name;
+      const childTag =
+        childOpeningName?.type === "JSXIdentifier"
+          ? childOpeningName.name.toLowerCase()
+          : null;
+
+      if (["nav", "menu"].includes(childTag)) return true;
+
+      // Rekursiv in die Kinder gehen
+      if (Array.isArray(c.children) && hasNavOrMenuRecursively(c.children)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   let ast;
   try {
     ast = parse(content, {
@@ -112,18 +133,7 @@ function detectRecognitionCues(content) {
 
       // 3. nav/menu inside footer
       if (tag === "footer") {
-        const hasNav = children.some(
-          (c) => {
-            if (c?.type !== "JSXElement") return false;
-
-            const childOpeningName = c.openingElement?.name;
-            const childTag =
-            childOpeningName?.type === "JSXIdentifier"
-                ? childOpeningName.name.toLowerCase()
-                : null;
-
-            return ["nav", "menu"].includes(childTag);
-        });
+        const hasNav = hasNavOrMenuRecursively(children);
 
         if (!hasNav) {
           feedback.push({
