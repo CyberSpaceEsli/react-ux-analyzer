@@ -50,15 +50,15 @@ function detectPageConsistency(content, fileType = "jsx") // or .css, .scss {
 - Scans JSX className or class props for custom fonts via Tailwind
 - Triggers warning if more than 2 different fonts are used
 4. Logo Linking
-- Identifies Logo, img, or svg elements not wrapped in an `<a>` tag
-- Suggests wrapping in `<a href="/">` to reinforce brand navigation
+- Identifies Logo components not wrapped in an `<a>` or `<link>` tag
+- Suggests wrapping in `<a href="/">` or `<Link to="/">` to reinforce brand navigation
 
 ## Feedback Example
 ```
 {
   Line 22, 
   Logo misses link to homepage.
-  Action: Wrap the logo in <a href='/'> to link back to homepage.
+  Action: Wrap the logo in <a href='/'> or <Link to='/'> to link back to homepage.
   Why: Users expect clicking the logo to return to the homepage.
   Heuristic: Nielsen #4: Consistency and Standards (RUX401)
   More info: https://www.nngroup.com/articles/consistency-and-standards/

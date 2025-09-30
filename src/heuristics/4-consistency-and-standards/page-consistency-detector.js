@@ -15,11 +15,10 @@ function detectPageConsistency(content, fileType = "jsx") {
     { element: "footer", allowedRoles: ["contentinfo"], found: false },
   ];
 
-  let logoWrappedInLink = false;
   const fontsUsed = new Map();
 
-  // CSS Font Checks
-    if (fileType === "css" || fileType === "scss") {
+  // Helper: checks CSS font
+  if (fileType === "css" || fileType === "scss") {
     // Check all @font-face blocks
     const fontFaceBlocks = [...content.matchAll(/@font-face\s*{([\s\S]*?)}/gi)];
     if (fontFaceBlocks.length > 2) {
@@ -32,10 +31,10 @@ function detectPageConsistency(content, fileType = "jsx") {
             severity: "warning",
         });
         });
-    }
+  }
 
-    // Check each @font-face block for number of font-family declarations
-    fontFaceBlocks.forEach(block => {
+  // Helper: check each @font-face block for number of font-family declarations
+  fontFaceBlocks.forEach(block => {
         const fontFamilyMatches = [...block[1].matchAll(/font-family\s*:\s*['"]?([^;'"]+)['"]?/gi)];
         if (fontFamilyMatches.length > 2) {
         fontFamilyMatches.forEach(match => {
@@ -48,10 +47,10 @@ function detectPageConsistency(content, fileType = "jsx") {
             });
         });
         }
-    });
+  });
 
-    // Check @import url(...) fonts
-    const importMatches = [...content.matchAll(/@import\s+url\(["']?([^"')]+)["']?\)/gi)];
+  // Helper: check @import url(...) fonts
+  const importMatches = [...content.matchAll(/@import\s+url\(["']?([^"')]+)["']?\)/gi)];
     if (importMatches.length > 2) {
         importMatches.forEach(match => {
         const lineNumber = content.slice(0, match.index).split("\n").length;
@@ -62,9 +61,32 @@ function detectPageConsistency(content, fileType = "jsx") {
             severity: "warning",
         });
         });
-    }
+  }
 
     return feedback;
+    }
+
+  // Helper: check parents for a or link tag
+   function isWrappedInLink(path) {
+      let currentPath = path;
+
+      while (currentPath) {
+        const node = currentPath.node;
+
+        if (node.type === "JSXElement") {
+          const openingName = node.openingElement.name;
+          if (openingName?.type === "JSXIdentifier") {
+            const tagName = openingName.name.toLowerCase();
+            if (tagName === "a" || tagName === "link") {
+              return true;
+            }
+          }
+        }
+
+        currentPath = currentPath.parentPath;
+      }
+
+      return false;
     }
 
     let ast;
@@ -84,7 +106,7 @@ function detectPageConsistency(content, fileType = "jsx") {
         else if (nameNode.type === "JSXMemberExpression") elementName = "[member expression]"; 
         }
 
-      // --- Page regions & roles ---
+      // Page regions have no aria roles
       pageRegions.forEach(region => {
         if (elementName === region.element) {
           region.found = true;
@@ -115,28 +137,27 @@ function detectPageConsistency(content, fileType = "jsx") {
         }
       });
 
-      // --- Logo check ---
+      // Logo not wrapped in link 
      for (const child of node.children || []) {
      if (child.type === "JSXElement") {
        const childName =
         child.openingElement.name && child.openingElement.name.type === "JSXIdentifier"
             ? child.openingElement.name.name
             : null;
-        if (["Logo", "img", "svg"].includes(childName)) {
-            if (
-            path.node.type === "JSXElement" &&
-            path.node.openingElement.name?.type === "JSXIdentifier" &&
-            path.node.openingElement.name.name === "a"
-        ) {
-            logoWrappedInLink = true;
-        }
-        if (!logoWrappedInLink) {
+
+        const isLikelyLogo = childName && childName.toLowerCase().includes("logo");
+
+        if (isLikelyLogo) {
+          // use helper to check if wrapped in <a> or <Link> parent or direct
+          const wrappedInLink = isWrappedInLink(path);
+
+        if (!wrappedInLink) {
             feedback.push({
             type: "missing-logo-link",
             line: child.loc.start.line,
             message: "Logo misses link to homepage.",
             severity: "warning",
-            action: "Wrap the logo in <a href='/'> to link back to homepage.",
+            action: "Wrap the logo component in <a href='/'> or <Link to='/'> to link back to homepage.",
             why: "Users expect clicking the logo to return to the homepage."
             });
         }
@@ -144,7 +165,7 @@ function detectPageConsistency(content, fileType = "jsx") {
      }
     }
 
-    // --- TailwindCSS font-[] detection ---
+    // TailwindCSS font-[] detection
     const classAttr = node.openingElement.attributes.find(
         attr =>
         attr.type === "JSXAttribute" &&
@@ -164,7 +185,7 @@ function detectPageConsistency(content, fileType = "jsx") {
             fontsUsed.set(fontName, node.loc.start.line);
           }
         }
-        if (fontsUsed.size > 2) { // only trigger feedback if more than 2 fonts
+        if (fontsUsed.size > 2) { // only trigger feedback if more than 2 fonts used
             feedback.push({
             type: "too-many-fonts",
             line: node.loc.start.line,
