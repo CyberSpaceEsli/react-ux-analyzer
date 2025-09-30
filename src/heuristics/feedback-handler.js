@@ -15,8 +15,7 @@ class FeedbackHandler {
    * @param {Array} issues - array of issue objects with {line, type, severity, content, message, analysisType}
    */
   showResults(filePath, issues) {
-    this.diagnostics.clear(); // clear all previous diagnostics
-    this.clear(filePath); // clear diagnostics for the file
+    const uri = vscode.Uri.file(filePath);
 
     const diagnostics = issues.map(issue => {
       const range = new vscode.Range(issue.line - 1, 0, issue.line - 1, 1000); // line range (0-1000 chars)
@@ -34,16 +33,16 @@ class FeedbackHandler {
       return diagnostic;
     });
 
-    this.diagnostics.set(vscode.Uri.file(filePath), diagnostics);
+    this.diagnostics.set(uri, diagnostics);
     this._showNotification(issues);
     this._showOutputChannel(filePath, issues);
   }
 
   /**
-   * Clear previous diagnostics for a file
+   * Clear all diagnostics from all files
    */
-  clear(filePath) {
-    this.diagnostics.delete(vscode.Uri.file(filePath));
+  clearAll() {
+    this.diagnostics.clear();
   }
 
   /**
