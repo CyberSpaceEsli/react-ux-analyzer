@@ -29,7 +29,7 @@ function detectControlExits(content) {
       const elementName = nameNode?.type === "JSXIdentifier" ? nameNode.name : null;
 
       // Do Modal/Dialog/Drawer/Popover components have onClose prop and visible close button
-      if (["Modal", "Dialog", "Drawer", "Popover"].includes(elementName)) {
+      if (["Modal", "Dialog", "Drawer", "Popover", "modal", "dialog", "drawer", "popover"].includes(elementName)) {
         // must have onClose prop
         const hasOnClose = node.openingElement.attributes.some(
           a => a.type === "JSXAttribute" && a.name.name === "onClose"
@@ -46,7 +46,7 @@ function detectControlExits(content) {
         }
 
         // check for buttons with "close" or "cancel" text inside
-        const closeButtonExists = node.children.some(child => {
+        const closeButtonExists = node.children.some(function check(child) {
           if (child.type === "JSXElement" && child.openingElement.name.type === "JSXIdentifier") {
             if (child.openingElement.name.name === "button") {
               const text = (child.children || [])
@@ -54,8 +54,9 @@ function detectControlExits(content) {
                 .join("")
                 .trim()
                 .toLowerCase();
-              return /close|exit|x|cancel/i.test(text);
+              if (/close|exit|x|cancel/i.test(text)) return true;
             }
+            if (child.children && child.children.some(check)) return true;
           }
           return false;
         });

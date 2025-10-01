@@ -5,7 +5,8 @@ function ClutteredComponent() {
     <>
     <div className="p-4 bg-white">
       {/* More than 3 primary colors (Tailwind + inline style) */}
-      <h1 className="text-red-500">Heading in red</h1>
+      <h1 className="text-red-500">Heading h1 in red</h1>
+      <h2 className="text-red-300">Heading h2 in red</h2>
       <p className="text-blue-600">Text in blue</p>
       {/* <p className="text-green-500">Text in green</p> */}
       <p style={{ color: '#ff9900' }}>Text in orange (inline)</p>

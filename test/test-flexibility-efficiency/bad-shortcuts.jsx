@@ -32,7 +32,7 @@ function BadMenuShortcuts() {
 }
 
 // ❌ BAD: useEffect that looks like it wants to handle keydown but doesn'<t></t>
-function CorrectUseEffect() {
+function BadUseEffect() {
  const useKeyDown = (callback, keys) => {
  const onKeyDown = (event) => {
     const wasAnyKeyPressed = keys.some((key) => event.key === key);
@@ -57,4 +57,4 @@ useEffect(() => {
 }, []);
 }
 
-export { SaveShortcut, BadMenuShortcuts, CorrectUseEffect, RightUseEffect };
+export { SaveShortcut, BadMenuShortcuts, BadUseEffect, RightUseEffect };

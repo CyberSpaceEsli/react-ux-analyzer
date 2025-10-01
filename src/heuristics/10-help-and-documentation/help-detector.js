@@ -10,7 +10,7 @@ function detectHelpFeatures(content) {
 
   const onboardingTextRegex = /\b(welcome|tour|guide|get started|walkthrough|intro|help)\b/i;
   const onboardingButtonRegex = /\b(start|begin|show me|give tour|next|continue)\b/i;
-  const helpLinkRegex = /\b(help|docs|support|faq|guide|get started|q&a)\b/i;
+  const helpLinkRegex = /\b(help|documentation|support|docs|faq|guide|get started|q&a)\b/i;
   const modalLikeTags = ["modal", "dialog", "popover", "tooltip"];
   const criticalInputTypes = [
         "email", "password", "file", "number",
@@ -28,6 +28,34 @@ function detectHelpFeatures(content) {
         for (const child of node.children) text += collectJSXText(child);
       }
       return text;
+    }
+
+    // Helper: check nav/menu and children recursively for help/support links
+    function findHelpLink(node, helpLinkRegex) {
+      if (!node) return false;
+
+      // Only check JSXElements
+      if (node.type === "JSXElement") {
+        const openingName = node.openingElement?.name;
+        const tag =
+          openingName?.type === "JSXIdentifier"
+            ? openingName.name.toLowerCase()
+            : null;
+
+        if (["a", "link"].includes(tag)) {
+          // check children for text matching helpLinkRegex
+          if (
+            node.children?.some(
+              (c) => c?.type === "JSXText" && helpLinkRegex.test(c.value)
+            )
+          ) {
+            return true;
+          }
+        }
+        // recursively check all children
+        return node.children?.some((child) => findHelpLink(child, helpLinkRegex));
+      }
+      return false;
     }
 
     // Helper: check if an action button exists in onboarding modals
@@ -135,28 +163,25 @@ function detectHelpFeatures(content) {
 
   traverse(ast, {
     JSXElement(path) {
-      const el = path.node;
+      const node = path.node;
       const opening = path.node.openingElement;
-      const openingElement = el.openingElement;
+      const openingElement = node.openingElement;
       if (!openingElement || openingElement.type !== "JSXOpeningElement") return;
 
       // Get tag name e.g. 'div', 'Modal', 'button'
       const nameNode = openingElement.name;
       const tag = nameNode?.type === "JSXIdentifier" ? nameNode.name.toLowerCase() : null;
       if (!tag) return;
-
-      // Extract inner text content of JSX children for modal/dialog
-      const children = Array.isArray(el.children) ? el.children : [];
      
-      const line = el.loc?.start?.line ?? null;
+      const line = node.loc?.start?.line ?? null;
 
       // Modal or Dialog components have onboarding content but no start button
       const isModalComponent = modalLikeTags.includes(tag);
 
       if (isModalComponent) {
-      const innerText = collectJSXText(el);
+      const innerText = collectJSXText(node);
       if (onboardingTextRegex.test(innerText)) {
-        const hasAction = hasActionButton(el);
+        const hasAction = hasActionButton(node);
         if (!hasAction) {
           feedback.push({
             type: "missing-onboarding-action",
@@ -172,24 +197,20 @@ function detectHelpFeatures(content) {
 
       // Nav and Menu components do not include help/support links
       if (["nav", "menu"].includes(tag)) {
-        const hasHelpLink = children.some((child) => {
-          if (child?.type !== "JSXElement") return false;
-          let linkTag = "";
-            if (
-            child?.type === "JSXElement" &&
-            child.openingElement?.name?.type === "JSXIdentifier"
-            ) {
-            linkTag = child.openingElement.name.name.toLowerCase();
-            }
-            if (!["a", "link"].includes(linkTag)) return false;
+        
+        // check recursively for help/support links
+        const hasHelpLink = findHelpLink(node, helpLinkRegex);
 
-          return child.children?.some(
-            (c) => c?.type === "JSXText" && helpLinkRegex.test(c.value)
-          );
-        });
+        // check for aria-label="breadcrumb" to avoid false positives
+        const hasBreadcrumbAriaLabel = (node.openingElement.attributes || []).some(attr =>
+          attr.type === "JSXAttribute" &&
+          attr.name?.name === "aria-label" &&
+          attr.value?.type === "StringLiteral" &&
+          attr.value.value.trim().toLowerCase() === "breadcrumb"
+        );
 
         // If no help/support link is found in nav/menu, warn
-        if (!hasHelpLink) {
+        if (!hasHelpLink && !hasBreadcrumbAriaLabel) {
           feedback.push({
             type: "missing-help-link-in-menu",
             line,
@@ -246,9 +267,9 @@ function detectHelpFeatures(content) {
       }
 
       // Icon-only buttons must have aria-label/title or be wrapped in Tooltip
-      if (isIconOnlyButton(el)) {
-      const line = el.loc?.start?.line || null;
-      if (!hasTitleAccessibleLabel(el) && !isWrappedInTooltip(path)) {
+      if (isIconOnlyButton(node)) {
+      const line = node.loc?.start?.line || null;
+      if (!hasTitleAccessibleLabel(node) && !isWrappedInTooltip(path)) {
         feedback.push({
           type: "missing-icon-button-label",
           line,

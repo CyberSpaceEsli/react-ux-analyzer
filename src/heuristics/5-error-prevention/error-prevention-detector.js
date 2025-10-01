@@ -11,7 +11,7 @@ function detectErrorPrevention(content) {
   const destructiveWords = /\b(delete|remove|clear all|clear|discard|erase|trash|reset)\b/i;
   const confirmationWords = /\b(are you sure|permanently|cannot be undone|irreversible)\b/i;
   const cancelWords = /\b(cancel|no|dismiss|exit|return|back|go back)\b/i;
-  const undoWords = /\b(undo|restore|revert|recover|unarchive|undelete|cancel)\b/i;
+  //const undoWords = /\b(undo|restore|revert|recover|unarchive|undelete|cancel)\b/i;
   const modalLikeTags = ["modal", "dialog", "confirmdialog", "alertdialog"];
   const contextualFields = ["select", "dropdown", "checkboxgroup", "radiogroup", "upload", "filepicker"];
   const userErrorFeedback = /(set|show|get)?(Error|Toast|Alert|Message|Snackbar)/i;
@@ -26,7 +26,7 @@ function detectErrorPrevention(content) {
   }
 
   // Helper: check if an undo option exists among siblings (like "Undo" button or text)
-  function hasUndoSibling(path) {
+  /*function hasUndoSibling(path) {
     const parent = path.parentPath;
     if (!parent || !parent.node || !parent.node.children) return false;
     return parent.node.children.some(child => {
@@ -40,7 +40,7 @@ function detectErrorPrevention(content) {
         }
         return false;
     });
-    }
+    }*/
 
     // Helper: determine if a node is a fetch or axios call
     function isNetworkCall(node) {
@@ -166,6 +166,32 @@ function detectErrorPrevention(content) {
     }
     }
 
+    // Helper: Search cancelWords recursively in children
+    function hasCancelWordsRecursively(children) {
+    for (const c of children) {
+      if (c.type === "JSXElement") {
+        // Prüfe, ob das Element ein Cancel-Button ist
+        const tag = c.openingElement?.name?.name?.toLowerCase();
+        const text = getTextFromJSX(c);
+        if (
+          tag === "button" &&
+          cancelWords.test(text)
+        ) {
+          return true;
+        }
+        // Rekursiv in die Kinder gehen
+        if (Array.isArray(c.children) && hasCancelWordsRecursively(c.children)) {
+          return true;
+        }
+      }
+      // Prüfe auch direktes JSXText
+      if (c.type === "JSXText" && cancelWords.test(c.value)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 
   let ast;
   try {
@@ -189,7 +215,7 @@ function detectErrorPrevention(content) {
       const line = node.loc?.start?.line ?? null;
     
     // Check for destructive buttons missing undo
-    if (tag === "button") {
+   /* if (tag === "button") {
       const buttonText = getTextFromJSX(node);
 
       if (destructiveWords.test(buttonText)) {
@@ -205,30 +231,20 @@ function detectErrorPrevention(content) {
           });
         }
       }
-    }
+    }*/
 
       // Detect dialog with destructive language but no cancel option
       if (modalLikeTags.includes(tag.toLowerCase())) {
         if (confirmationWords.test(content)) {
 
           // check if cancel option exists in children
-          const hasCancelOption = children.some(
-            (c) =>
-              c.type === "JSXElement" &&
-              c.openingElement?.name?.type === "JSXIdentifier" &&
-              cancelWords.test(
-                c.children
-                  ?.filter((cc) => cc.type === "JSXText")
-                  .map((cc) => cc.value.toLowerCase())
-                  .join(" ")
-              )
-          );
+          const hasCancelOption = hasCancelWordsRecursively(children);
 
           if (!hasCancelOption) {
             feedback.push({
               type: "missing-cancel-option",
               line,
-              message: `Dialog contains destructive language but no cancel or 'go back' option.`,
+              message: `Dialog contains destructive language but no 'cancel' or 'go back' option.`,
               severity: "warning",
               why: "Users may feel forced into a destructive action without a way to back out.",
               action: "Add a 'Cancel' or 'Go Back' button to allow users to exit safely.",

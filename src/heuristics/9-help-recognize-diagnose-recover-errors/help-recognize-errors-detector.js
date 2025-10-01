@@ -10,13 +10,51 @@ function detectHelpErrorRecognition(content) {
 
   const technicalErrorRegex = /\b(error\s*\d{3,4}|api error|err_?[a-z0-9_]+|code\s*\d+|network error|request failed|failed to fetch)\b/i;
 
-  // Helper: to extract all text from jsx elements
   function extractJSXText(node) {
     if (node.type === "JSXText") return node.value;
     if (node.type === "JSXElement" && node.children) {
       return node.children.map(extractJSXText).join(" ");
     }
     return "";
+  }
+
+  // Recursive function to check if element or any children have red or bold styles
+  function hasVisualStyle(node) {
+    if (!node) return false;
+
+    // Check current node styles and classes
+    if (node.type === "JSXElement") {
+      const attrs = node.openingElement.attributes || [];
+
+      // Check classes for error-like keywords
+      const classAttr = attrs.find(a => a.type === "JSXAttribute" && a.name.name === "className" && a.value?.type === "StringLiteral");
+      const classNameVal = classAttr?.value?.value || "";
+      const isErrorClass = /(error|danger|fail|warning)[-_]?/i.test(classNameVal);
+
+      // Check inline styles
+      const styleAttr = attrs.find(a => a.type === "JSXAttribute" && a.name.name === "style" && a.value.type === "JSXExpressionContainer");
+      let hasRed = false;
+      let hasBold = false;
+      if (styleAttr && styleAttr.value.expression.type === "ObjectExpression") {
+        hasRed = styleAttr.value.expression.properties.some(p =>
+          ((p.key.type === "Identifier" && p.key.name === "color") || (p.key.type === "StringLiteral" && p.key.value === "color")) &&
+          p.value.type === "StringLiteral" &&
+          /red/i.test(p.value.value)
+        );
+        hasBold = styleAttr.value.expression.properties.some(p =>
+          ((p.key.type === "Identifier" && p.key.name === "fontWeight") || (p.key.type === "StringLiteral" && p.key.value === "fontWeight")) &&
+          p.value.type === "StringLiteral" &&
+          /(semibold|bold|extrabold|font|700|800|900)/i.test(p.value.value)
+        );
+      }
+
+      if (isErrorClass || hasRed || hasBold) return true;
+
+      // Recursively check children
+      return node.children.some(child => hasVisualStyle(child));
+    }
+
+    return false;
   }
 
   let ast;
@@ -42,8 +80,7 @@ function detectHelpErrorRecognition(content) {
 
       const attrs = opening?.attributes ?? [];
 
-      // Determine if this is an "error-like" component and styled that way
-      const isErrorComponent = ["error", "alert", "message", "notification", "errormessage", "formerror"].includes(tagName.toLowerCase());
+      const isErrorComponent = ["error", "alert", "message", "notification", "errormessage", "formerror"].includes(tagName);
 
       const classAttr = attrs.find(
         (attr) =>
@@ -51,89 +88,39 @@ function detectHelpErrorRecognition(content) {
           attr.name?.name === "className" &&
           attr.value?.type === "StringLiteral"
       );
-
-      const classNameVal = classAttr?.type === "JSXAttribute" && classAttr?.value?.type === "StringLiteral" ? classAttr?.value?.value ?? "" : "";
-
+      const classNameVal = classAttr?.type === "JSXAttribute" && classAttr?.value?.type === "StringLiteral" ? classAttr?.value?.value : "";
       const isErrorClass = /(error|alert|danger|fail|invalid|warning|notice|msg|feedback)[-_]?/i.test(classNameVal);
 
-      // Search inline style attributes
-      const styleAttr = attrs.find(
-        (attr) =>
-          attr.type === "JSXAttribute" &&
-          attr.name?.name === "style" &&
-          attr.value?.type === "JSXExpressionContainer"
-      );
-       
-    let hasRedStyle = false;
-    let hasBoldStyle = false;
+      const text = extractJSXText(node);
+      const matchesTechnical = technicalErrorRegex.test(text);
 
-    if (
-      styleAttr?.type === "JSXAttribute" &&
-      styleAttr.value?.type === "JSXExpressionContainer" &&
-      styleAttr.value.expression?.type === "ObjectExpression"
-    ) {
-    // Check for color: 'red'  
-    hasRedStyle = styleAttr.value.expression.properties.some(
-    (prop) =>
-        prop.type === "ObjectProperty" &&
-        (
-          (prop.key.type === "Identifier" && prop.key.name === "color") ||
-          (prop.key.type === "StringLiteral" && prop.key.value === "color")
-        ) &&
-        prop.value.type === "StringLiteral" &&
-        /red/i.test(prop.value.value)
-    );
+      // Only proceed if this is error component or has error class
+      if (!isErrorComponent && !isErrorClass) return;
 
-    // Check for fontWeight: 'bold' or 700, 800, 900
-    hasBoldStyle = styleAttr.value.expression.properties.some(
-    (prop) =>
-        prop.type === "ObjectProperty" &&
-        (
-          (prop.key.type === "Identifier" && prop.key.name === "fontWeight") ||
-          (prop.key.type === "StringLiteral" && prop.key.value === "fontWeight")
-        ) &&
-        prop.value.type === "StringLiteral" &&
-        /(bold|font|700|800|900)/i.test(prop.value.value)
-    );
-    }
+      // 1. Warn if technical jargon used (both error component or error class)
+      if (matchesTechnical) {
+        feedback.push({
+          type: "technical-error-message",
+          line,
+          message: `User-facing error contains technical jargon or error code ("${text.trim()}"). Express errors in plain language and offer a constructive suggestion.`,
+          severity: "warning",
+          why: "Technical error messages can confuse users and hinder their ability to recover from errors.",
+          action: "Replace technical terms with user-friendly language and provide actionable next steps.",
+        });
+      }
 
-    const text = extractJSXText(node);
-
-    // Compare if text has technical error message
-    const matchesTechnical = technicalErrorRegex.test(text);
-
-    if (isErrorComponent || isErrorClass || hasRedStyle || matchesTechnical) {
-        // If technical error phrasing is used, warn
-        if (matchesTechnical) {
-          feedback.push({
-            type: "technical-error-message",
-            line,
-            message: `User-facing error contains technical jargon or error code ("${text.trim()}"). Express errors in plain language and offer a constructive suggestion.`,
-            severity: "warning",
-            why: `Technical error messages can confuse users and hinder their ability to recover from errors.`,
-            action: `Replace technical terms with user-friendly language and provide actionable next steps.`,
-          });
-        }
-
-    if (isErrorComponent || isErrorClass || hasRedStyle || matchesTechnical) {
-
-      // If there is no visual indication of an error, warn
-      const hasVisualIndicator = isErrorClass || hasRedStyle || hasBoldStyle;
-
-      if (!hasVisualIndicator) {
+      // 2. Warn if no visual style found on element or its children
+      if (!hasVisualStyle(node)) {
         feedback.push({
           type: "error-lacks-visual-style",
           line,
-          message: `Error message detected but lacks visual cues like red color and bold font.`,
+          message: "Error message detected but lacks visual cues like red color and bold font.",
           severity: "warning",
-          why: `Errors should be visually distinct to help users quickly recognize them.`,
-          action: `Add visual styles (e.g., red text, bold font) to make the error message stand out.`,
+          why: "Errors should be visually distinct to help users quickly recognize them.",
+          action: "Add visual styles (e.g., red text, bold font) to make the error message stand out.",
         });
       }
     }
-
-    }
-    },
   });
 
   return feedback;

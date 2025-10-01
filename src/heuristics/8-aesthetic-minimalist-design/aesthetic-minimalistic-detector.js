@@ -14,12 +14,18 @@ const { drawElementAreas } = require('./draw-element-areas');
 async function detectAestheticMinimalism(content, overrideUrl) {
   const feedback = [];
 
-  const colorRegex = /(?:text|bg|border|fill|stroke)-(red|blue|green|yellow|purple|pink|orange|teal|cyan|indigo|amber|lime|emerald|fuchsia|violet|rose|sky|slate|gray|zinc|neutral|stone)-(\d{2,3})/gi;
+  //const colorRegex = /(?:text|bg|border|fill|stroke)-(red|blue|green|yellow|purple|pink|orange|teal|cyan|indigo|amber|lime|emerald|fuchsia|violet|rose|sky|slate|gray|zinc|neutral|stone)-(\d{2,3})/gi;
   const tailwindColorSet = new Set();
   const inlineColorSet = new Set();
 
   const styleMap = new Map();
   let primaryColorLine = null;
+
+  // Helper: get tailwind color names from className
+    function extractColorName(cls) {
+      const match = cls.match(/(?:text|bg|border|fill|stroke)-([a-z]+)-\d{2,3}/i);
+      return match ? match[1].toLowerCase() : null;
+    }
 
   // Helper: extract visual styles from className and style attributes from clickable and non-clickable elements and get used colors
   function extractVisualStyles(attributes) {
@@ -83,17 +89,20 @@ async function detectAestheticMinimalism(content, overrideUrl) {
 
       // collect colors from tailwind classes and inline styles
       styles.classes.forEach((cls) => {
-        const match = cls.match(colorRegex);
-        if (match) match.forEach((m) => {
+        const colorName = extractColorName(cls);
+        if (colorName && colorName !== "black" && colorName !== "white") {
           if (!primaryColorLine) primaryColorLine = line;
-          tailwindColorSet.add(m);
-        });
+          tailwindColorSet.add(colorName);
+        }
       });
 
       // collect inline colors
       styles.inlineColors.forEach((color) => {
-        if (!primaryColorLine) primaryColorLine = line;
-        inlineColorSet.add(color);
+        const colorLower = color.toLowerCase();
+        if (colorLower !== "black" && colorLower !== "white") {
+          if (!primaryColorLine) primaryColorLine = line;
+          inlineColorSet.add(colorLower);
+        }
       });
 
       // create a unique key for the visual style based on className and style attributes
@@ -128,7 +137,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
           }
 
           // check if element is clickable
-          if (attr.name.name === 'onClick' || attr.name.name === 'href') {
+          if (attr.name.name === 'onClick' || attr.name.name === 'href' || attr.name.name === 'to') {
             isClickable = true;
           }
         }
@@ -136,7 +145,7 @@ async function detectAestheticMinimalism(content, overrideUrl) {
 
       // also consider tag names for clickable elements
       const tag = tagName.toLowerCase();
-      if (["a", "button"].includes(tag)) {
+      if (["a", "button", "link"].includes(tag)) {
         isClickable = true;
       }
 

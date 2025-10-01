@@ -7,7 +7,7 @@ const traverse = require("@babel/traverse").default;
 function detectRecognitionCues(content) {
   const feedback = [];
 
-  const criticalInputTypes = ["tel", "date", "number", "email", "url", "password", "phone"];
+  const criticalInputTypes = ["tel", "date", "email", "url", "password", "phone"];
 
   // Helper: to count menu items li, a, button recursively
   function countMenuItemsRecursively(children) {
@@ -36,7 +36,7 @@ function detectRecognitionCues(content) {
   return count;
   }
 
-  // Helper: check if nav or menu exists recursively
+  // Helper: check if nav or menu exists recursively in footer
   function hasNavOrMenuRecursively(children) {
     for (const c of children) {
       if (c?.type !== "JSXElement") continue;
@@ -44,7 +44,7 @@ function detectRecognitionCues(content) {
       const childOpeningName = c.openingElement?.name;
       const childTag =
         childOpeningName?.type === "JSXIdentifier"
-          ? childOpeningName.name.toLowerCase()
+          ? childOpeningName.name
           : null;
 
       if (["nav", "menu"].includes(childTag)) return true;
@@ -54,6 +54,27 @@ function detectRecognitionCues(content) {
         return true;
       }
     }
+    return false;
+  }
+
+  // Helper: check if li has submenu and arrow/caret icon
+  function containsIconComponent(node) {
+    if (!node) return false;
+
+    // Check if current node is a JSXElement and its name matches icon keywords
+    if (
+      node.type === "JSXElement" &&
+      node.openingElement.name?.type === "JSXIdentifier" &&
+      /arrow|caret|expand|icon/i.test(node.openingElement.name.name)
+    ) {
+      return true;
+    }
+
+    // Check children recursively
+    if (node.children && node.children.length > 0) {
+      return node.children.some(child => containsIconComponent(child));
+    }
+
     return false;
   }
 
@@ -78,7 +99,8 @@ function detectRecognitionCues(content) {
       const tagName = opening.type === "JSXOpeningElement" && opening.name?.type === "JSXIdentifier" && opening.name?.name;
       if (!tagName || typeof tagName !== "string") return;
 
-      const tag = tagName.toLowerCase();
+      const tag = tagName;
+      const tagLower = tagName.toLowerCase();
       const children = Array.isArray(node.children) ? node.children : [];
       const line = node.loc?.start?.line ?? null;
 
@@ -130,8 +152,8 @@ function detectRecognitionCues(content) {
         }
       }
 
-      // Is <nav> or <menu> inside footer
-      if (tag === "footer") {
+      // Is <nav> or <menu> inside <footer>
+      if (tagLower === "footer" && tag[0] === tag[0].toLowerCase()) {
         const hasNav = hasNavOrMenuRecursively(children);
 
         if (!hasNav) {
@@ -153,12 +175,8 @@ function detectRecognitionCues(content) {
             ["ul", "menu"].includes(c.openingElement?.name?.name)
         );
 
-        // check for common arrow/caret icon components
-        const hasIcon = children.some(
-          (c) =>
-            c?.type === "JSXElement" && c?.openingElement?.name?.type === "JSXIdentifier" &&
-            /arrow|caret|expand|icon/i.test(c.openingElement?.name?.name || "")
-        );
+        // check li for icon recursively
+        const hasIcon = containsIconComponent(node);
 
         if (hasNested && !hasIcon) {
           feedback.push({

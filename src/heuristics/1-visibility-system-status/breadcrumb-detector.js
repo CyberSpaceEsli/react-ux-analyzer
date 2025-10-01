@@ -8,7 +8,7 @@ const traverse = require("@babel/traverse").default;
  */
 function detectBreadcrumbs(content) {
   const pageComponents = ["page", "layout", "main"];
-  const breadcrumbComponents = ["breadcrumb", "breadcrumbs"];
+  //const breadcrumbComponents = ["breadcrumb", "breadcrumbs"];
   const htmlBreadcrumbPatterns = [
     /aria-label\s*=\s*["']breadcrumb["']/i,
     /class(Name)?\s*=\s*["'][^"']*breadcrumb-list[^"']*["']/i
@@ -23,6 +23,14 @@ function detectBreadcrumbs(content) {
     throw new Error("JSX code could not be parsed: " + err.message);
   }
 
+  // Helper: check if a JSXElement is a breadcrumb component case-insensitive
+  function isBreadcrumbComponent(nameNode) {
+    return (
+      nameNode.type === "JSXIdentifier" &&
+      /breadcrumb/i.test(nameNode.name)
+    );
+  }
+
   // Helper: recursive check for any breadcrumb
   function hasBreadcrumb(node) {
     if (!node) return false;
@@ -30,21 +38,61 @@ function detectBreadcrumbs(content) {
     // check if element or its children is a breadcrumb component
     if (node.type === "JSXElement") {
       const name = node.openingElement.name;
-      if (name.type === "JSXIdentifier" && breadcrumbComponents.includes(name.name.toLowerCase())) {
+      if (isBreadcrumbComponent(name)) {
         return true;
       }
 
+
       // check for HTML-like breadcrumb patterns in attributes
-      for (const attr of node.openingElement.attributes || []) {
+      /*for (const attr of node.openingElement.attributes || []) {
         if (attr.type === "JSXAttribute" && attr.name && attr.value) {
           const str = attr.value.type === "StringLiteral"
             ? attr.value.value
-            : attr.value.type === "JSXExpressionContainer"
+            : attr.value.type === "JSXExpressionContainer" &&
+              attr.value.expression.type === "StringLiteral"
               ? "{...}"
               : "";
           if (htmlBreadcrumbPatterns.some(p => p.test(str))) return true;
         }
-      }
+      }*/
+
+        // check for HTML-like breadcrumb patterns in aria-label or className and in combination with nav role
+        for (const attr of node.openingElement.attributes || []) {
+          if (attr.type === "JSXAttribute" && attr.name && attr.value) {
+            // Prüfe auf aria-label="breadcrumb"
+            if (
+              attr.name.name === "aria-label" &&
+              attr.value.type === "StringLiteral" &&
+              attr.value.value.toLowerCase() === "breadcrumb"
+            ) {
+              return true;
+            }
+            // Prüfe auf role="navigation"
+            if (
+              attr.name.name === "role" &&
+              attr.value.type === "StringLiteral" &&
+              attr.value.value.toLowerCase() === "navigation"
+            ) {
+              // Optional: kann als Breadcrumb gelten, wenn aria-label auch gesetzt ist
+              // Prüfe, ob aria-label="breadcrumb" ebenfalls vorhanden ist
+              const hasAriaLabel = node.openingElement.attributes.some(a =>
+                a.type === "JSXAttribute" &&
+                a.name.name === "aria-label" &&
+                a.value.type === "StringLiteral" &&
+                a.value.value.toLowerCase() === htmlBreadcrumbPatterns[0].source.match(/breadcrumb/)[0]
+              );
+              if (hasAriaLabel) return true;
+            }
+            // Prüfe auf className="breadcrumb-list"
+            if (
+              (attr.name.name === "className" || attr.name.name === "class") &&
+              attr.value.type === "StringLiteral" &&
+              attr.value.value.toLowerCase().includes(htmlBreadcrumbPatterns[1].source.match(/breadcrumb-list/)[0])
+            ) {
+              return true;
+            }
+          }
+        }
 
       // recursively check children
       return (node.children || []).some(hasBreadcrumb);
