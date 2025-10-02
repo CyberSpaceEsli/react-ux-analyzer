@@ -63,6 +63,7 @@ function BadContactForm() {
 // ❌ BAD EXAMPLE: File upload without progress
 function BadFileUploader() {
   const [selectedFile, setSelectedFile] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleUpload = async () => {
     if (!selectedFile) return;
@@ -70,12 +71,14 @@ function BadFileUploader() {
     // Bad: Upload without progress indication
     const formData = new FormData();
     formData.append('file', selectedFile);
-    
+    setIsLoading(true);
+
     await fetch('/api/upload', {
       method: 'POST',
       body: formData
     });
     
+    //setIsLoading(false);
     alert('File uploaded!');
   };
 
@@ -86,7 +89,7 @@ function BadFileUploader() {
         onChange={(e) => setSelectedFile(e.target.files[0])}
       />
       {/* Bad: No upload progress */}
-      <button onClick={handleUpload}>Upload</button>
+      <button onClick={handleUpload} type="submit">Upload</button>
     </div>
   );
 }
@@ -95,6 +98,7 @@ function BadFileUploader() {
 function BadLoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -124,8 +128,8 @@ function BadLoginForm() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
-      {/* Bad: No loading state during authentication */}
-      <button type="submit">Login</button>
+      {/* Bad: No loading indication during authentication */}
+      <button type="submit" disabled={loading}>Login</button>
     </form>
   );
 }
