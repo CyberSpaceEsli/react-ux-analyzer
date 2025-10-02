@@ -1,7 +1,7 @@
 # Visual Quality Analysis (NIMA)
 
-Performs a quantitative aesthetic evaluation of the application using a Neural Image Assessment (NIMA) model. 
-This module uses a pretrained NIMA model to score UI screenshots based on human-like aesthetic judgment.
+Performs a quantitative aesthetic evaluation of the application using a **Neural Image Assessment** (NIMA) model. 
+This module uses a pretrained NIMA model to **score UI screenshots based on human-like aesthetic judgment**.
 
 ## What It Does
 The NIMA Visual Quality Checker runs a deep learning-based assessment to evaluate the prjects visual appeal, using:

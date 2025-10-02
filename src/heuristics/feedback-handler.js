@@ -35,7 +35,7 @@ class FeedbackHandler {
 
     this.diagnostics.set(uri, diagnostics);
     this._showNotification(issues);
-    this._showOutputChannel(filePath, issues);
+    //this._showOutputChannel(filePath, issues);
   }
 
   /**
@@ -168,7 +168,7 @@ class FeedbackHandler {
     }
   }
 
-  _showOutputChannel(filePath, issues) {
+ /* _showOutputChannel(filePath, issues) {
     if (issues.length === 0) return;
 
     this.outputChannel.clear();
@@ -187,7 +187,7 @@ class FeedbackHandler {
     });
 
     this.outputChannel.show(true);
-  }
+  }*/
 }
 
 module.exports = FeedbackHandler;

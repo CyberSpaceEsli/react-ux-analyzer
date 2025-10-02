@@ -1,18 +1,43 @@
 {
   "name": "react-ux-analyzer",
   "displayName": "React UX Analyzer",
-  "description": "Automatically scan react code (JSX) for usability principles. ",
-  "version": "0.0.1",
-  "publisher": "local-dev",
+  "description": "Analyzes usability issues based on Nielsen’s 10 heuristics for React (JSX) projects and assesses visual quality with NIMA scoring.",
+  "version": "1.0.0",
+  "publisher": "CyberSpaceEsli",
+  "galleryBanner": {
+        "color": "#673AB7",
+        "theme": "dark"
+    },
+  "homepage": "https://github.com/CyberSpaceEsli/react-ux-analyzer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CyberSpaceEsli/react-ux-analyzer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CyberSpaceEsli/react-ux-analyzer/issues"
+  },
   "engines": {
     "vscode": "^1.102.0"
   },
   "categories": [
-    "Other"
+    "Linters", "Education", "Other"
+  ],
+  "keywords": [
+  "usability",
+  "ux",
+  "nielsen",
+  "react",
+  "jsx",
+  "linters",
+  "heuristics",
+  "accessibility",
+  "nima",
+  "visual quality"
   ],
   "activationEvents": [
-    "*"
+    "onLanguage:javascriptreact"
   ],
+  "icon": "./images/react-ux-analyzer-logo.png",
   "main": "./extension.js",
   "contributes": {
     "commands": [
@@ -23,10 +48,6 @@
       {
         "command": "react-ux-analyzer.clearApiKey",
         "title": "🗑️ Clear OpenRouter API Key"
-      },
-      {
-        "command": "react-ux-analyzer.helloWorld",
-        "title": "Hello World"
       },
       {
         "command": "react-ux-analyzer.usabilityAnalyzeReactFiles",
@@ -85,7 +106,7 @@
       },
       {
         "command": "react-ux-analyzer.analyzeHelp",
-        "title": "Analyze Help Features (Nielsen #10: Help & Documentation)",
+        "title": "Analyze Help and Documentation (Nielsen #10: Help & Documentation)",
         "category": "React UX Analyzer"
       },
       {

@@ -78,6 +78,13 @@ function activate(context) {
     /*{fn: detectAestheticMinimalism, type: 'AESTHETIC_MINIMALISM'}*/
   ];
 
+  // Watch for .jsx file saves and trigger heuristic analysis
+  vscode.workspace.onDidSaveTextDocument((document) => {
+  if (document.languageId === 'javascriptreact' || document.fileName.endsWith('.jsx')) {
+    usabilityAnalyzeReactFiles();
+  }
+  });
+
   // Command: Set OpenRouter API Key
   vscode.commands.registerCommand('react-ux-analyzer.setApiKey', async () => {
     const apiKey = await vscode.window.showInputBox({
