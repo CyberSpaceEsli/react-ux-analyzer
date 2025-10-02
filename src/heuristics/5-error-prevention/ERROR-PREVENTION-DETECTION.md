@@ -4,7 +4,6 @@ Detects missing undo options, poor error handling, and lack of user-facing feedb
 
 ## What the Detector Does
 This detector ensures that:
-- Destructive actions like delete or reset include undo mechanisms
 - Modals and dialogs with dangerous wording offer a cancel or go back option
 - Custom form fields offer context through labels or hints
 - fetch() or axios calls are wrapped with proper error handling
@@ -34,30 +33,25 @@ It parses the JSX or JS content using Babel, and traverses the AST to identify e
 ###  Key Detection Methods
 | Method | Description |
 |--------|-------------|
-| Destructive Buttons | Flags buttons like "Delete", "Clear", "Remove" if there’s no "Undo" nearby |
-| Confirmation Dialogs | Detects modals with dangerous wording but missing cancel/dismiss/exit options |
+| Confirmation Dialogs | Detects modals with destructive text but missing no/cancel/dismiss/exit options |
 | Custom Inputs | Fields like `<Select>` or `<Upload>` must include contextual hints (`aria-label`, `title`, etc.) |
 | AJAX Calls | Warns if `fetch()` or axios are used without `.catch()` or `try/catch` |
 | Error Handling | Warns if error handlers only log to console and don’t show user-facing messages |
 | Missing Catch Block | Flags try blocks that do not include a catch clause |
 
 ### Detection Logic
-1. Destructive Buttons without Undo
-- If a button contains text like “Delete”, “Erase”, “Reset”, etc.
-- And no sibling contains “Undo”, “Restore”, etc.
-- → Warning
-2. Dangerous Dialogs without Cancel
+1. Destructive Text in Dialogs without Cancel
 - If modal contains words like “permanently”, “irreversible”, etc.
 - And no cancel or go-back option is rendered
 - → Warning
-3. Fields Missing Context
+2. Fields Missing Context
 - Flags `<Select>`, `<Dropdown>`, etc., if they have no title, aria-label, or aria-describedby
-4. Network Requests
+3. Network Requests
 - Finds `fetch()` and `axios.*()` calls
  - Checks for:
 	- Presence of `.catch()` block or try/catch
 	- Feedback logic beyond console.log (e.g. `setError()`,` <Error />`, etc.)
-5. Try/Catch Analysis
+4. Try/Catch Analysis
 - If `try {}` block has no catch → Warning
 - If catch only logs errors → Warning
 - If `.catch()` arrow function has only `console.log()` → Warning
@@ -89,7 +83,7 @@ Preventing errors is likely a matter of reducing burdens on users and guiding th
 > "Users are often distracted from the task at hand, so prevent unconscious errors by offering suggestions, utilizing constraints, and being flexible." [nngroup/error-prevention](https://www.nngroup.com/articles/slips/)
 
 This detector helps:
-- Prevent user errors through undo/cancel safety nets
+- Prevent user errors through cancel safety nets
 - Enforce good error handling practices
 - Catch risky areas before they lead to failure
 

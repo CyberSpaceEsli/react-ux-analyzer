@@ -8,39 +8,39 @@ const traverse = require("@babel/traverse").default;
 function detectErrorPrevention(content) {
   const feedback = [];
 
-  const destructiveWords = /\b(delete|remove|clear all|clear|discard|erase|trash|reset)\b/i;
-  const confirmationWords = /\b(are you sure|permanently|cannot be undone|irreversible)\b/i;
-  const cancelWords = /\b(cancel|no|dismiss|exit|return|back|go back)\b/i;
-  //const undoWords = /\b(undo|restore|revert|recover|unarchive|undelete|cancel)\b/i;
-  const modalLikeTags = ["modal", "dialog", "confirmdialog", "alertdialog"];
+  const destructiveWords = /\b(delete|remove|clear|discard|trash|reset)\b/i;
+  const confirmationWords = /\b(are you sure|permanently|cannot be undone|irreversible|undone|reset|clear all)\b/i;
+  const cancelWords = /\b(cancel|no|exit|return|back|undo)\b/i;
+  const modalLikeTags = ["modal", "dialog", "confirmdialog", "popup", "alertdialog"];
   const contextualFields = ["select", "dropdown", "checkboxgroup", "radiogroup", "upload", "filepicker"];
   const userErrorFeedback = /(set|show|get)?(Error|Toast|Alert|Message|Snackbar)/i;
 
-  // Helper: extract text from JSX nodes for techncial error phrasing
-  function getTextFromJSX(node) {
-    if (node.type === "JSXText") return node.value.toLowerCase().trim();
-    if (node.type === "JSXElement" && node.children) {
-        return node.children.map(getTextFromJSX).join(" ");
+    // Helper: recursively extract text from JSX nodes
+    function getTextFromJSX(node) {
+      if (node.type === "JSXText") return node.value.toLowerCase().trim();
+      if (node.type === "JSXElement" && node.children) {
+          return node.children.map(getTextFromJSX).join(" ");
+      }
+      return "";
     }
-    return "";
-  }
-
-  // Helper: check if an undo option exists among siblings (like "Undo" button or text)
-  /*function hasUndoSibling(path) {
-    const parent = path.parentPath;
-    if (!parent || !parent.node || !parent.node.children) return false;
-    return parent.node.children.some(child => {
-        if (child === path.node) return false; // skip self
+  
+    // Helper: recursively check if any child contains destructive words
+    function hasDestructiveOrConfirmationText(children) {
+      for (const child of children) {
         if (child.type === "JSXElement") {
-        const text = getTextFromJSX(child);
-        return undoWords.test(text);
+          const text = getTextFromJSX(child);
+          if (destructiveWords.test(text) || confirmationWords.test(text)) {
+            return true;
+          }
+          if (Array.isArray(child.children) && hasDestructiveOrConfirmationText(child.children)) {
+            return true;
+          }
+        } else if (child.type === "JSXText" && (destructiveWords.test(child.value) || confirmationWords.test(child.value))) {
+          return true;
         }
-        if (child.type === "JSXText") {
-        return undoWords.test(child.value);
-        }
-        return false;
-    });
-    }*/
+      }
+      return false;
+    }
 
     // Helper: determine if a node is a fetch or axios call
     function isNetworkCall(node) {
@@ -117,7 +117,7 @@ function detectErrorPrevention(content) {
     return false;
     }
 
-    // Helper: check if the code has meaningful user-facing feedback
+    // Helper: check if the code error feedback by error handling is given (setError, <Error />, etc)
     function isUserFeedback(node) {
     if (!node) return false;
 
@@ -158,7 +158,7 @@ function detectErrorPrevention(content) {
         feedback.push({
         type: "dev-only-error-handling",
         line,
-        message: `Error handler contains only console logs.`,
+        message: `Error handler contains only console log.`,
         severity: "warning",
         why: "This provides no feedback to users when an error occurs.",
         action: "Consider displaying user feedback (e.g. setError, <Error />)",
@@ -214,27 +214,25 @@ function detectErrorPrevention(content) {
       const children = Array.isArray(node.children) ? node.children : [];
       const line = node.loc?.start?.line ?? null;
     
-    // Check for destructive buttons missing undo
-   /* if (tag === "button") {
-      const buttonText = getTextFromJSX(node);
-
-      if (destructiveWords.test(buttonText)) {
-        // check for undo/restore nearby
-        if (!hasUndoSibling(path)) {
+    // Check for destructive text in modals missing cancel option
+    if (modalLikeTags.includes(tag)) {
+      if (hasDestructiveOrConfirmationText(children)) {
+        const cancelExists = hasCancelWordsRecursively(children);
+        if (!cancelExists) {
           feedback.push({
-            type: "missing-undo-option",
-            line: node.loc?.start?.line,
-            message: `Destructive button "${buttonText}" found without an undo or restore action nearby.`,
+            type: "missing-cancel-option",
+            line,
+            message: `Dialog contains destructive action text.`,
             severity: "warning",
-            why: "Users may accidentally trigger destructive actions and need a way to recover.",
-            action: "Add an 'Undo' button or option near the destructive action.",
+            why: "Users need second chance to confirm if they want to continue with destructive operations.",
+            action: "Try the best in offering an cancel or undo option for backing out.",
           });
         }
       }
-    }*/
+    }
 
       // Detect dialog with destructive language but no cancel option
-      if (modalLikeTags.includes(tag.toLowerCase())) {
+      /*if (modalLikeTags.includes(tag.toLowerCase())) {
         if (confirmationWords.test(content)) {
 
           // check if cancel option exists in children
@@ -251,7 +249,7 @@ function detectErrorPrevention(content) {
             });
           }
         }
-      }
+      }*/
 
       // Select or custom fields missing hints
       if (contextualFields.includes(tag.toLowerCase())) {

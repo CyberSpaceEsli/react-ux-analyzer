@@ -54,7 +54,7 @@ function detectControlExits(content) {
                 .join("")
                 .trim()
                 .toLowerCase();
-              if (/close|exit|x|cancel/i.test(text)) return true;
+              if (/close|exit|x|cancel|no/i.test(text)) return true;
             }
             if (child.children && child.children.some(check)) return true;
           }
@@ -90,7 +90,7 @@ function detectControlExits(content) {
         if (buttonText.includes("back") || buttonText.includes("previous")) hasBackButton = true;
 
         // destructive actions
-        if (buttonText.includes("delete") || buttonText.includes("remove")) destructiveButtons.push(node);
+        if (buttonText.includes("delete") || buttonText.includes("remove") || buttonText.includes("reset") || buttonText.includes("trash")) destructiveButtons.push(node);
         if (buttonText.includes("undo") || buttonText.includes("cancel") || buttonText.includes("restore"))
           undoButtons.push(node);
       }
@@ -117,10 +117,10 @@ function detectControlExits(content) {
       feedback.push({
         type: "missing-control",
         line: btn.loc.start.line,
-        message: "Destructive action detected without Undo/Cancel/Restore.",
+        message: "Destructive action detected in button.",
         severity: "warning",
         why: "Users may accidentally trigger destructive actions and need a way to recover.",
-        action: "Add an Undo, Cancel, or Restore option after destructive actions.",
+        action: "Add an 'Undo', 'Cancel', or 'Restore' option after destructive actions.",
       });
     }
   }
