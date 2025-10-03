@@ -102,10 +102,10 @@ function detectHelpErrorRecognition(content) {
         feedback.push({
           type: "technical-error-message",
           line,
-          message: `User-facing error contains technical jargon or error code ("${text.trim()}"). Express errors in plain language and offer a constructive suggestion.`,
+          message: `User-facing error contains technical jargon or error code.`,
           severity: "warning",
           why: "Technical error messages can confuse users and hinder their ability to recover from errors.",
-          action: "Replace technical terms with user-friendly language and provide actionable next steps.",
+          action: `Replace technical term ("${text.trim()}") with user-understandable language and actionable next steps.`,
         });
       }
 
