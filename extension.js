@@ -52,7 +52,7 @@ async function usabilityAnalyzeReactFiles() {
     }
     
     await new Promise(resolve => setTimeout(resolve, 1200));
-    vscode.window.showInformationMessage(`✅ React UX Analyzer found ${totalIssues} issue(s).`);
+    vscode.window.showWarningMessage(` React UX Analyzer found ${totalIssues} issue(s).`);
   });
 }
 
@@ -521,6 +521,7 @@ function activate(context) {
     const url = process.env.REACT_APP_URL || 'http://localhost:5173';
     const isRunning = await isServerRunning(url);
     console.log('✅ isRunning:', isRunning);
+    feedbackHandler.clearAll();
 
     if (!isRunning) {
       vscode.window.showErrorMessage(
@@ -528,6 +529,7 @@ function activate(context) {
       );
       return;
     }
+
       vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -537,16 +539,34 @@ function activate(context) {
         async () => {
           try {
             const { mean, std, error } = await runVisualQualityCheck();
+            const issues = [];
+
+            // feedback information for NIMA score
+            if (mean && std) {
+              issues.push({
+                line: 1,
+                type: "nima-score",
+                severity: "info",
+                message: `NIMA Visual Quality Score: ${mean.toFixed(2)} (±${std.toFixed(2)})`,
+                analysisType: "NIMA",
+                action: "Review the visual quality score for your UI.",
+                why: "A higher NIMA score indicates better perceived visual quality.",
+                mean,
+                std
+              });
+            }
+
+            feedbackHandler.showResults('Visual Quality Analysis', issues);
 
             if (error) {
               vscode.window.showErrorMessage(`❌ NIMA Error: ${error}`);
-            } else {
+            } /*else {
               vscode.window.showInformationMessage(
                 `📊 Visual Quality Score: ${mean.toFixed(2)} (±${std.toFixed(2)})`
               );
-            }
+            }*/
           } catch (err) {
-            vscode.window.showErrorMessage(`Unexpected error: ${err.message}`);
+            vscode.window.showErrorMessage(`Unexpected error with NIMA: ${err.message}`);
           }
         }
       );

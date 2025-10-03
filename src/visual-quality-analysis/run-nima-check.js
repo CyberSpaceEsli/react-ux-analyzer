@@ -62,7 +62,6 @@ async function runNimaCheck() {
       throw new Error(`Could not parse scores. Output was: "${output}"`);
     }
 
-    console.log(`✅ NIMA Score: ${mean.toFixed(2)} (±${std.toFixed(2)})`);
     return { mean, std };
 
   } catch (err) {

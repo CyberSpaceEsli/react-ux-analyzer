@@ -19,10 +19,13 @@ class FeedbackHandler {
 
     const diagnostics = issues.map(issue => {
       const range = new vscode.Range(issue.line - 1, 0, issue.line - 1, 1000); // line range (0-1000 chars)
+      let severity = vscode.DiagnosticSeverity.Warning 
+      if (issue.severity === "info") severity = vscode.DiagnosticSeverity.Information;
+
       const diagnostic = new vscode.Diagnostic(
         range,
         this._formatMessage(issue),
-        this._mapSeverity()
+        severity
       );
 
       diagnostic.source = 'React UX Analyzer';
@@ -87,7 +90,8 @@ class FeedbackHandler {
       'FLEXIBILITY_EFFICIENCY': 'Nielsen #7: Flexibility and Efficiency of Use',
       'AESTHETIC_MINIMALISM': 'Nielsen #8: Aesthetic and Minimalist Design',
       'ERROR_RECOVERY': 'Nielsen #9: Help Users Recognize, Diagnose, and Recover from Errors',
-      'HELP': 'Nielsen #10: Help and Documentation'
+      'HELP': 'Nielsen #10: Help and Documentation',
+      'NIMA': 'NIMA Visual Quality Score'
     };
 
     if (analysisType?.startsWith('CUSTOM:')) {
@@ -113,7 +117,8 @@ class FeedbackHandler {
       'FLEXIBILITY_EFFICIENCY': 'RUX701',
       'AESTHETIC_MINIMALISM': 'RUX801',
       'ERROR_RECOVERY': 'RUX901',
-      'HELP': 'RUX1001'
+      'HELP': 'RUX1001',
+      'NIMA': 'VQA001'
     };
 
     if (analysisType?.startsWith('CUSTOM:')) {
@@ -133,9 +138,6 @@ class FeedbackHandler {
   if (docsOverride) {
     return vscode.Uri.parse(docsOverride);
   }
-   /* if (issue.docs) {
-    return vscode.Uri.parse(issue.docs);
-  }*/
 
    // custom rule link fallback
   if (analysisType?.startsWith('CUSTOM:')) {
@@ -154,17 +156,31 @@ class FeedbackHandler {
       'FLEXIBILITY_EFFICIENCY': 'https://www.nngroup.com/articles/ui-copy/#toc-guidelines-for-command-shortcuts-3',
       'AESTHETIC_MINIMALISM': 'https://www.nngroup.com/articles/minimalist-design/',
       'ERROR_RECOVERY': 'https://www.nngroup.com/articles/help-users-recognize-diagnose-and-recover-from-errors/',
-      'HELP': 'https://www.nngroup.com/articles/help-and-documentation/'
+      'HELP': 'https://www.nngroup.com/articles/help-and-documentation/',
+      'NIMA': 'https://arxiv.org/abs/1709.05424'
     };
 
     return vscode.Uri.parse(links[analysisType] || 'https://www.nngroup.com/articles/ten-usability-heuristics/');
   }
 
   _showNotification(issues) {
-    if (issues.length > 0) {
-      vscode.window.showWarningMessage(`React UX Analyzer found ${issues.length} issue(s).`);
-    } else {
+
+    // no issues found
+    if (issues.length === 0) {
       vscode.window.showInformationMessage(`✅ No UI/UX issues found !`);
+      return;
+    };
+
+      // check if issue has severity warning or info
+    const hasWarning = issues.some(issue => issue.severity !== "info");
+    const hasInfo = issues.every(issue => issue.severity === "info");
+
+    if (hasWarning && issues.length > 0) {
+      vscode.window.showWarningMessage(`React UX Analyzer found ${issues.length} issue(s).`);
+    }
+    
+    if (hasInfo && issues.length > 0) {
+      vscode.window.showInformationMessage(`View NIMA results in problem channel.`);
     }
   }
 
