@@ -1,8 +1,8 @@
 /**
  * React UX Analyzer Extension
- * - one unified command for all detectors
+ * - One unified command for heuristic detectors (except #2 and #8)
  * - Separate commands per detector
- * - Project-wide usability scan for JSX files
+ * - Push collected issues to feedback-handler
  */
 const vscode = require('vscode');
 const http = require('http');
@@ -190,39 +190,18 @@ function activate(context) {
         }, async (progress) => {
         try {
             progress.report({ increment: 10, message: "Analyzing current file..." });
-
-            // Find all relevant files in the workspace
-            //const files = await vscode.workspace.findFiles('**/*.{jsx,tsx}');
-            //let combinedText = '';
-
-            // Concatenate text from files for analysis
-           /*for (const file of files) {
-            const code = await vscode.workspace.openTextDocument(file).then(d => d.getText());
-            const visibleText = extractVisibleTextFromCode(code); // only human-readable UI strings
-            combinedText += visibleText + " ";
-          }*/
             
             progress.report({ increment: 40, message: "Detecting business domain with AI..." });
-
-            /*const domain = await detectBusinessDomain(content, availableDomains) || 'general';
-            console.log('📤 Sending domain detection prompt...');
-            console.log('⛳ text:', content.substring(0, 300).replace(/\s+/g, ' ') + '...');
-            vscode.window.showInformationMessage(`✅ Domain: '${domain}'`);*/
 
             const visibleText = extractVisibleTextFromCode(content);
             const visibleTextAsString = visibleText.map(t => t.text).join(' ').trim();
             const domain = await detectBusinessDomain(visibleTextAsString, availableDomains, apiKey);
-            //const debugText = "As a user, I want to track my order using the SKU code provided in the confirmation email. The fulfillment center should update the status regularly.";
 
-            //const domain = await detectBusinessDomain(debugText, availableDomains);
             console.log('🧠 DEBUG Detected domain from hardcoded input:', domain);
-
-            /*const detectedDomain = await detectBusinessDomain(combinedText, availableDomains);
-            const domain = detectedDomain || 'general';*/
             
             progress.report({ increment: 60, message: `Running UI text analysis (${domain})...` });
 
-            // Now run the JSX analyzer with the detected domain
+            // Run the JSX analyzer with the detected domain
             const issues = await detectMatchSystemwithRealWorld(visibleText, domain, apiKey);
 
             progress.report({ increment: 100, message: "Jargon analysis complete." });
@@ -235,13 +214,6 @@ function activate(context) {
               }))
             );
 
-            /*if (detectedDomain) {
-            const config = vscode.workspace.getConfiguration('react-ux-analyzer');
-            await config.update('businessField', detectedDomain, vscode.ConfigurationTarget.Workspace);
-            vscode.window.showInformationMessage(`✅ Domain: '${detectedDomain}'`);
-          } else {
-            vscode.window.showWarningMessage('⚠️ Could not determine business domain.');
-          }*/
         } catch (err) {
           console.error('Match system error:', err);
           vscode.window.showErrorMessage('❌ Analysis failed: ' + err.message);
@@ -560,11 +532,7 @@ function activate(context) {
 
             if (error) {
               vscode.window.showErrorMessage(`❌ NIMA Error: ${error}`);
-            } /*else {
-              vscode.window.showInformationMessage(
-                `📊 Visual Quality Score: ${mean.toFixed(2)} (±${std.toFixed(2)})`
-              );
-            }*/
+            }
           } catch (err) {
             vscode.window.showErrorMessage(`Unexpected error with NIMA: ${err.message}`);
           }

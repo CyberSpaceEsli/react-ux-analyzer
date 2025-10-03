@@ -51,7 +51,7 @@ More info: https://www.w3.org/WAI/tutorials/images/decision-tree/
 > **Note**: Showing feedback in the **Problem Channel** allows for **code highlighting** and **tooltips** on hover, which also show the diagnostics.
 
 ## Severity Mapping
-⚠️ Only `"warning"` feedback is currently shown to avoid noise and each detection needs to be solved for optimal UI/UX flow.
+⚠️ `"warning"` feedback is currently shown to avoid noise and each detection needs to be solved for optimal UI/UX flow.
 ```js
 feedback.push({    
     // other feedback issue types
@@ -59,6 +59,8 @@ feedback.push({
     // other feedback issue types        
 });
 ```
+
+ℹ️ `"info"` feedback is currently showing calculated NIMA results.
 
 ## Issue Types
 Each issue contains:
@@ -88,6 +90,7 @@ Internally, `analysisType` maps to heuristic names and codes like so:
 | `AESTHETIC_MINIMALISM` | Aesthetic & Minimalist Design | RUX801|
 | `ERROR_RECOVERY` | Help Users Recover from Errors | RUX901|
 | `HELP` | Help & Documentation | RUX1001|
+| `NIMA` | Visual Quality Analysis | VQA001|
 | `CUSTOM:*` | Custom UX Rule | CUX-*|
 
 ### More Examples

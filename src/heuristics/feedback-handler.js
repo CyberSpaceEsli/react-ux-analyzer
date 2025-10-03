@@ -1,7 +1,7 @@
 const vscode = require('vscode');
 
 /**
- * FeedbackHandler - centralizes feedback display for React UX Analyzer
+ * FeedbackHandler - centralizes feedback display for React UX Analyzer + NIMA
  */
 class FeedbackHandler {
   constructor() {
@@ -38,7 +38,6 @@ class FeedbackHandler {
 
     this.diagnostics.set(uri, diagnostics);
     this._showNotification(issues);
-    //this._showOutputChannel(filePath, issues);
   }
 
   /**
@@ -184,26 +183,6 @@ class FeedbackHandler {
     }
   }
 
- /* _showOutputChannel(filePath, issues) {
-    if (issues.length === 0) return;
-
-    this.outputChannel.clear();
-    this.outputChannel.appendLine(`=== React UX Analyzer Report ===`);
-    this.outputChannel.appendLine(`File: ${filePath}`);
-    this.outputChannel.appendLine(`Issues: ${issues.length}`);
-    this.outputChannel.appendLine('');
-
-    issues.forEach((issue, i) => {
-      const icon = issue.severity === 'error' ? '🚨' : issue.severity === 'info' ? 'ℹ️' : '⚠️';
-      this.outputChannel.appendLine(`${i + 1}. ${icon} Line ${issue.line}: ${issue.message}`);
-      if (issue.content) this.outputChannel.appendLine(`   Code: ${issue.content}`);
-      this.outputChannel.appendLine(`   Heuristic: ${this._getHeuristicName(issue.analysisType)} (${this._getHeuristicCode(issue.analysisType)})`);
-      this.outputChannel.appendLine(`   More info: ${this._getDocumentationLink(issue.analysisType, issue.docs)}`);
-      this.outputChannel.appendLine('');
-    });
-
-    this.outputChannel.show(true);
-  }*/
 }
 
 module.exports = FeedbackHandler;
