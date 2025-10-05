@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
 const { detectBusinessDomain } = require('../../src/heuristics/2-match-system-with-real-world/language-analyzer.js');
-const { detectMatchSystemwithRealWorld } = require('./../../src/heuristics/2-match-system-with-real-world/match-system-world-detector.js');
-const { extractVisibleTextFromCode } = require('./../../src/heuristics/utils/extractVisibleText.js');
+const { detectMatchSystemwithRealWorld } = require('../../src/heuristics/2-match-system-with-real-world/match-system-world-detector.js');
+const { extractVisibleTextFromCode } = require('../../src/heuristics/utils/extractVisibleText.js');
 
 // ✅ File path to analyze (change as needed)
 const FILE_PATH = './test/test-system-real-world/bad-server-status-jargon.jsx';

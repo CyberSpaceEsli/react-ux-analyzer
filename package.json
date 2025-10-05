@@ -39,6 +39,12 @@
   ],
   "icon": "./images/react-ux-analyzer-logo.png",
   "main": "./extension.js",
+  "files": [
+    "extension.js",
+    "src/",
+    "images/",
+    "node_modules/"
+  ],
   "contributes": {
     "commands": [
       {
