@@ -3,6 +3,9 @@ node_modules
 .vscode-test/
 *.vsix
 .env
+dist/
+.vscodeignore
+webpack.config.js
 
 # Ignore all macOS Finder files
 .DS_Store
