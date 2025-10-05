@@ -231,26 +231,6 @@ function detectErrorPrevention(content) {
       }
     }
 
-      // Detect dialog with destructive language but no cancel option
-      /*if (modalLikeTags.includes(tag.toLowerCase())) {
-        if (confirmationWords.test(content)) {
-
-          // check if cancel option exists in children
-          const hasCancelOption = hasCancelWordsRecursively(children);
-
-          if (!hasCancelOption) {
-            feedback.push({
-              type: "missing-cancel-option",
-              line,
-              message: `Dialog contains destructive language but no 'cancel' or 'go back' option.`,
-              severity: "warning",
-              why: "Users may feel forced into a destructive action without a way to back out.",
-              action: "Add a 'Cancel' or 'Go Back' button to allow users to exit safely.",
-            });
-          }
-        }
-      }*/
-
       // Select or custom fields missing hints
       if (contextualFields.includes(tag.toLowerCase())) {
         const hasTooltipAttr = path.node.openingElement.attributes.some(

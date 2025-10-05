@@ -96,6 +96,9 @@ Issues appear instantly in the **Problems Panel**.
 - Multi-file analysis with result grouping via FeedbackHandler
 - Supports Activation via Commands + on Save
 
+### 1.0.1
+- minor bug fixes
+
 ## About
 This extension was created as a **Master’s Project at TU Chemnitz**.  
 It helps React developers integrate usability heuristics directly into their workflow.

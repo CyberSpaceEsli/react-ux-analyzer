@@ -6,13 +6,13 @@ const takeFullPageScreenshot = require('./screenshot/take-screenshot');
 
 async function runNimaCheck() {
   try {
-    // 1. Load URL from .env or fallback
+    // Load URL from .env or fallback
     const url = process.env.REACT_APP_URL || 'http://localhost:3000';
     if (!url.startsWith('http')) {
       throw new Error(`Invalid URL: "${url}" — must start with http://`);
     }
 
-    // 2. Set paths
+    // Set python and screenshot paths
     const pythonPath = path.resolve(__dirname, './venv/bin/python3');
     const screenshotPath = path.resolve(__dirname, './screenshot/screenshot.png');
     const scriptPath = path.resolve(__dirname, './python/run_nima.py');
@@ -22,7 +22,7 @@ async function runNimaCheck() {
       throw new Error(`Python script NIMA not found at: ${scriptPath}`);
     }
 
-    // 4. Take screenshot
+    // Take screenshot
     console.log('🔍 env REACT_APP_URL:', process.env.REACT_APP_URL);
     console.log(`📸 Taking screenshot of: ${url}`);
     try {
@@ -32,7 +32,7 @@ async function runNimaCheck() {
       throw new Error(`❌ Failed to take screenshot: ${screenshotErr.message}`);
     }
 
-    // 5. Run Python scoring
+    // Run Python scoring
     console.log('🤖 Running NIMA Python scoring...');
     let result;
     try {
@@ -50,7 +50,7 @@ async function runNimaCheck() {
         else console.log('🧹 Screenshot deleted');
     });
 
-    // 6. Parse output
+    // Parse output
     const output = result.trim();
     if (!output.includes(',')) {
       throw new Error(`Unexpected output from Python script: "${output}"`);

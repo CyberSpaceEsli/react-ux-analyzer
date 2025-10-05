@@ -42,8 +42,10 @@ function detectPageConsistency(content, fileType = "jsx") {
             feedback.push({
             type: "too-many-fonts",
             line: lineNumber,
-            message: `More than 2 font-family declarations in a single @font-face block. Found '${match[1]}'.`,
+            message: `More than 2 font-family declarations found in project.`,
             severity: "warning",
+            why: "Maintaining font consistency improves readability and UI consistency.",
+            action: `Found '${match[1]}' fonts, use maximum 2 fonts in the project for consistency.`,
             });
         });
         }
@@ -59,6 +61,8 @@ function detectPageConsistency(content, fileType = "jsx") {
             line: lineNumber,
             message: "More than 2 fonts imported via @import url(...). Maintain font consistency.",
             severity: "warning",
+            why: "Maintaining font consistency improves readability and UI consistency.",
+            action: `Found '${match[1]}' fonts, use maximum 2 fonts in the project for consistency.`,
         });
         });
   }
@@ -119,7 +123,7 @@ function detectPageConsistency(content, fileType = "jsx") {
               line: node.loc.start.line,
               message: `<${region.element}> is missing a WAI-ARIA role. Recommended: ${region.allowedRoles.join(", ")}`,
               severity: "warning",
-              action: "Add role='" + region.allowedRoles[0] + "' to <" + region.element + ">.",
+              action: `Add role='${region.allowedRoles[0]}' to <${region.element}>.`,
               why: "Accessibility requires a role to be defined for screen readers."
             });
           } else {
@@ -131,6 +135,8 @@ function detectPageConsistency(content, fileType = "jsx") {
                 line: node.loc.start.line,
                 message: `<${region.element}> has an invalid role "${roleValue}". Recommended: ${region.allowedRoles.join(", ")}`,
                 severity: "warning",
+                why: `Accessibility requires a role to be defined for screen readers.`,
+                action: `Change role='${roleValue}' to role='${region.allowedRoles[0]}' on <${region.element}>.`,
               });
             }
           }

@@ -42,20 +42,6 @@ function detectBreadcrumbs(content) {
         return true;
       }
 
-
-      // check for HTML-like breadcrumb patterns in attributes
-      /*for (const attr of node.openingElement.attributes || []) {
-        if (attr.type === "JSXAttribute" && attr.name && attr.value) {
-          const str = attr.value.type === "StringLiteral"
-            ? attr.value.value
-            : attr.value.type === "JSXExpressionContainer" &&
-              attr.value.expression.type === "StringLiteral"
-              ? "{...}"
-              : "";
-          if (htmlBreadcrumbPatterns.some(p => p.test(str))) return true;
-        }
-      }*/
-
         // check for HTML-like breadcrumb patterns in aria-label or className and in combination with nav role
         for (const attr of node.openingElement.attributes || []) {
           if (attr.type === "JSXAttribute" && attr.name && attr.value) {
