@@ -43,7 +43,9 @@
     "extension.js",
     "src/",
     "images/",
-    "node_modules/"
+    "node_modules/",
+    "README.md",
+    ".env"
   ],
   "contributes": {
     "commands": [
