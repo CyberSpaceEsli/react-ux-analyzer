@@ -152,7 +152,7 @@ function detectRecognitionCues(content) {
         }
       }
 
-      // Is <nav> or <menu> inside <footer>
+      // is either <nav> or <menu> inside <footer>
       if (tagLower === "footer" && tag[0] === tag[0].toLowerCase()) {
         const hasNav = hasNavOrMenuRecursively(children);
 
@@ -162,6 +162,8 @@ function detectRecognitionCues(content) {
             line,
             message: `Footer elements should include a <nav> or <menu> for quick navigation.`,
             severity: "warning",
+            why: "Footers are expected to provide navigation options to users.",
+            action: "Add a <nav> or <menu> element inside the footer."
           });
         }
       }
@@ -182,8 +184,10 @@ function detectRecognitionCues(content) {
           feedback.push({
             type: "missing-caret",
             line,
-            message: `<li> contains submenu but no icon to signify dropdown.`,
+            message: `<li> contains submenu but no icon to signify dropdown is present.`,
             severity: "warning",
+            why: "Users may not recognize that a submenu exists without visual cues.",
+            action: "Add a <Arrow /> or <Caret /> icon to the <li> element."
           });
         }
       }

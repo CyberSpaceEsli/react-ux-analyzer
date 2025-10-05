@@ -86,7 +86,7 @@ function activate(context) {
   });
 
   // Command: Set OpenRouter API Key
-  vscode.commands.registerCommand('react-ux-analyzer.setApiKey', async () => {
+  const setKeyCommand = vscode.commands.registerCommand('react-ux-analyzer.setApiKey', async () => {
     const apiKey = await vscode.window.showInputBox({
       prompt: 'Enter your OpenRouter API key (sk-...)',
       ignoreFocusOut: true,
@@ -102,7 +102,7 @@ function activate(context) {
   });
 
   // Command: Clear OpenRouter API Key
-  vscode.commands.registerCommand('react-ux-analyzer.clearApiKey', async () => {
+  const clearKeyCommand =  vscode.commands.registerCommand('react-ux-analyzer.clearApiKey', async () => {
   await secretStorage.delete('openrouterApiKey');
   vscode.window.showInformationMessage('🗑️ OpenRouter API key deleted from secret storage.');
   });
@@ -600,6 +600,8 @@ function activate(context) {
   const analyzeProjectCommand = vscode.commands.registerCommand('react-ux-analyzer.usabilityAnalyzeReactFiles', usabilityAnalyzeReactFiles);
 
   // Register all commands
+  context.subscriptions.push(setKeyCommand);
+  context.subscriptions.push(clearKeyCommand);
   context.subscriptions.push(analyzeProjectCommand);
   context.subscriptions.push(analyzeBreadcrumbCommand);
   context.subscriptions.push(analyzeLoadingCommand);
