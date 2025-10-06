@@ -42,14 +42,75 @@ async function loadCustomRules() {
       const filePath = path.join(resolvedDir, file);
 
       try {
-        const rule = require(filePath);
+        console.log('🔍 Loading custom rule from:', filePath);
+
+        if (!fs.existsSync(filePath)) {
+          throw new Error(`File not found: ${filePath}`);
+        }
+
+        // Clear any cached version and load the module
+        let rule;
+try {
+  rule = require(path.resolve(filePath));
+} catch (requireErr) {
+  // Fallback: manual execution with Extension's dependencies
+  console.log('🔄 Direct require failed, trying manual execution...', requireErr.message);
+  
+  try {
+    const code = fs.readFileSync(filePath, 'utf-8');
+    
+    // Provide Extension's dependencies to custom rules
+    const customRequire = (moduleName) => {
+      console.log(`🔍 Custom rule requesting: ${moduleName}`);
+      
+      // Provide Extension's Babel dependencies
+      switch (moduleName) {
+        case '@babel/parser':
+          console.log('✅ Providing @babel/parser from Extension');
+          return require('@babel/parser');
+        case '@babel/traverse':
+          console.log('✅ Providing @babel/traverse from Extension');
+          return require('@babel/traverse');
+        case 'vscode':
+          console.log('✅ Providing vscode API from Extension');
+          return vscode;
+        // Add more dependencies as needed
+        case 'fs':
+          return require('fs');
+        case 'path':
+          return require('path');
+        default:
+          // Try normal require for other modules
+          try {
+            return require(moduleName);
+          } catch (err) {
+            throw new Error(`Dependency '${moduleName}' not available. Available: @babel/parser, @babel/traverse, vscode, fs, path`, err);
+          }
+      }
+    };
+    
+    const moduleFunc = new Function('module', 'exports', 'require', '__filename', '__dirname', code);
+    const module = { exports: {} };
+    
+    // Use custom require that provides Extension dependencies
+    moduleFunc(module, module.exports, customRequire, filePath, path.dirname(filePath));
+    rule = module.exports;
+    
+    console.log('✅ Custom rule loaded with Extension dependencies');
+  } catch (manualErr) {
+    throw new Error(`Failed to load custom rule: ${manualErr.message}`);
+  }
+}
+
+        console.log('🔍 Rule loaded, structure:', Object.keys(rule));
+        console.log('🔍 Detector type:', typeof rule.detector);
 
         // Validate rule structure
         if (typeof rule.detector === 'function') {
           const acceptsUrl = rule.detector.length >= 2;
 
           ruleModules.push({
-            name: file,
+            name: file.replace(/\.(js|cjs)$/, ''), // remove file extension
             run: rule.detector, // function(content) or function(content, url)
             acceptsUrl, // true if detector(content, url)
             overrideUrl: acceptsUrl ? fallbackUrl : undefined // pass URL if detector accepts it

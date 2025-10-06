@@ -53,7 +53,16 @@ async function runNimaCheck(url) {
         throw new Error(`Required packages not found in venv. Error: ${err.message}`);
     }
 
-    const screenshotPath = path.resolve(__dirname, './screenshot/screenshot.png');
+    //const screenshotPath = path.resolve(__dirname, './screenshot/screenshot.png');
+    const screenshotsDir = path.join(workspaceRoot, 'public', 'react-ux-screenshots');
+    // Create directory if not exists
+    if (!fs.existsSync(screenshotsDir)) {
+      fs.mkdirSync(screenshotsDir, { recursive: true });
+    }
+
+    const screenshotPath = path.join(screenshotsDir, `nima-screenshot.png`);
+    console.log('📸 Screenshot saved for review::', screenshotPath);
+
     const scriptPath = path.resolve(__dirname, './python/run_nima.py');
 
     // Check if Python script exists
@@ -82,12 +91,6 @@ async function runNimaCheck(url) {
     } catch (pyErr) {
       throw new Error(`Python script failed: ${pyErr.message}`);
     }
-
-    // Cleanup screenshot
-    fs.unlink(screenshotPath, (err) => {
-        if (err) console.warn('Could not delete screenshot:', err);
-        else console.log('🧹 Screenshot deleted');
-    });
 
     // Parse output
     const output = result.trim();

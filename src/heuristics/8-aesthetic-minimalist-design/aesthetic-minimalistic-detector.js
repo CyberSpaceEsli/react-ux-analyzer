@@ -200,17 +200,15 @@ async function detectAestheticMinimalism(content, url) {
     throw new Error('No workspace folder opened. Please open your React project folder.');
   }
 
-  // Mit Timestamp für mehrere Analysen
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19); // 2024-10-06T15-30-45
   const utilsDir = path.join(workspaceRoot, 'public', 'react-ux-screenshots');
   if (!fs.existsSync(utilsDir)) {
   fs.mkdirSync(utilsDir, { recursive: true });
   }
 
   // Screenshot files in public folder
-  const screenshotPath = path.join(utilsDir, `screenshot-${timestamp}.png`);
-  const maskPath = path.join(utilsDir, `mask-${timestamp}.json`);
-  const debugImagePath = path.join(utilsDir, `debug-whitespace-${timestamp}.png`);
+  const screenshotPath = path.join(utilsDir, `screenshot.png`);
+  const maskPath = path.join(utilsDir, `elements-mask.json`);
+  const debugImagePath = path.join(utilsDir, `mark-elements-screenshot.png`);
 
   /*// Path for temporary screenshot and mask files in utils folder
   const screenshotPath = require('path').join(__dirname, 'utils', 'screenshot.png');

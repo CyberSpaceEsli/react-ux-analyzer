@@ -7,7 +7,7 @@ Create a `.vscode/settings.json` file in your project root with the following co
 ```json
 {
   "react-ux-analyzer.customRulePath": "public/custom-ux-rules",
-  "react-ux-analyzer.previewUrl": "http://localhost:3000" // Your localhost url
+  "react-ux-analyzer.targetUrl": "http://localhost:5173" // Your localhost url
 }
 ```
 
@@ -18,7 +18,7 @@ Create the folder structure as follows:
 my-project/
 ├── public/
 │   └── custom-ux-rules/
-│       └── my-rule.js
+│       └── my-rule.cjs
 </code></pre>
 
 * Place your custom rule files inside `public/custom-ux-rules`
@@ -26,8 +26,8 @@ my-project/
 
 ## 3. File Format for Custom Rules
 React-UX-Analyzer loads rules written in **CommonJS format**:
-* If your project uses the default Node.js setup (no `"type": "module"` in `package.json`), use `.js` files.
-* If your project is ESM (`"type": "module"` in `package.json`), use `.cjs` files so they work with `require(...)`.
+* If your project uses the default Node.js setup (no `"type": "module"` in `package.json`), use `.cjs` files.
+* If your project is ESM (`"type": "module"` in `package.json`), use `.js` files so they work with `require(...)`.
 
 ✅ All rule files must export a detector function:
 ```js
@@ -38,6 +38,9 @@ module.exports = { detector(...) }
 ## 4. Example: Custom Rule Detector
 Here’s a template for your custom rule file:
 ```js
+const { parse } = require('@babel/parser');
+const traverse = require('@babel/traverse').default; // babel packages loaded from extension
+
 module.exports = {
   detector(content) {
     const feedback = [];
@@ -99,7 +102,6 @@ Example:
 ## 6. Summary
 * Configure your custom rule path in `.vscode/settings.json`
 * Place your rule files in `public/custom-ux-rules`
-* Use CommonJS format and export a `detector` function
-* Return feedback objects with optional fields for rich documentation
+* Use CommonJS format (file ending `.cjs`) and export a `detector` function
 
 With this setup, React‑UX‑Analyzer will automatically load and apply your custom UX rules!
