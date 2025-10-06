@@ -107,6 +107,9 @@ Issues appear instantly in the **Problems Panel**.
 ### 1.0.3
 - fix NIMA availability
 
+### 1.0.4
+- fix path updates
+
 ## About
 This extension was created as a **Master’s Project at TU Chemnitz**.  
 It helps React developers integrate usability heuristics directly into their workflow.
