@@ -168,6 +168,13 @@ function activate(context) {
       vscode.window.showErrorMessage('❌ Please open a file first!');
       return;
     }
+    feedbackHandler.clearAll();
+
+    /*const visibleText = [
+      { text: "We use comprehensive educational frameworks.", line: 1 },
+      { text: "talent cultivation is our goal.", line: 2 },
+      { text: "Welcome!", line: 3 },
+    ];*/
 
     const apiKey = await context.secrets.get('openrouterApiKey');
 
@@ -176,8 +183,7 @@ function activate(context) {
       return;
     }
 
-    const availableDomains = ['health', 'legal', 'finance', 'e-commerce', 'information technology', 'education'];
-    feedbackHandler.clearAll();
+   const availableDomains = ['health', 'legal', 'finance', 'e-commerce', 'information technology', 'education'];
 
     const document = editor.document;
     const content = document.getText();
@@ -198,17 +204,25 @@ function activate(context) {
             const domain = await detectBusinessDomain(visibleTextAsString, availableDomains, apiKey);
 
             console.log('🧠 DEBUG Detected domain from hardcoded input:', domain);
-            
+
             progress.report({ increment: 60, message: `Running UI text analysis (${domain})...` });
+
+            // Mock JSX Analyzer
+            //const issues = await detectMatchSystemwithRealWorld(visibleText, 'education', 'fake-key');
 
             // Run the JSX analyzer with the detected domain
             const issues = await detectMatchSystemwithRealWorld(visibleText, domain, apiKey);
 
             progress.report({ increment: 100, message: "Jargon analysis complete." });
 
+            //console.log('🧪 TEST: Created test jargon issue');
+            console.log('🧪 TEST: Issues array length:', issues.length);
+            //console.log('🧪 TEST: Issues:', issues);
+
+            //console.log(Array.isArray(issues), issues);
             feedbackHandler.showResults(
-              fileName,
-              issues.map((issue) => ({
+              //editor.document.fileName, issues
+              fileName, issues.map((issue) => ({
                 ...issue,
                 analysisType: 'MATCH_SYSTEM_REAL_WORLD',
               }))

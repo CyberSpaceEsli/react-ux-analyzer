@@ -12,14 +12,12 @@ Its purpose is to replace internal or technical language with terms that resonat
 ### Main Function: `detectMatchSystemwithRealWorld(visibleText, apiKey, domain = 'general')`
 ```javascript
 
-  // helper functions
-
 function detectMatchSystemwithRealWorld(visibleText, apiKey, domain = 'general') {
   const feedback = [];
 
-  //extracts text linesonly for jargon phrases
+  //check extracted text lines for jargon detection
   
-  // detector needs LLM processing file
+  // detector needs LLM processing function
   const result = await checkForJargon(textLine, apiKey, domain);
   //feedback.push
 
@@ -36,14 +34,16 @@ function detectMatchSystemwithRealWorld(visibleText, apiKey, domain = 'general')
 | Error Handling | Gracefully skips lines if API request fails |
 
 ### Detection Logic
-1. Uses visible text entries from the UI (e.g., labels, buttons) (see function `heuristics/utils/extractVisibleText.js`)
+1. Uses visible text entries from the UI (e.g., paragraphs, titles) (see function `heuristics/utils/extractVisibleText.js`)
 2. Call LLM via OpenRouter
-- Uses LLM Free Tier Model Grok 4
+- Uses LLM Free Tier Model from Meta: Llama 4 Maverick
 - Takes API Key for requests (see Using OpenRouter API Features 🔐)
 - Determines business domain and language jargon (see function `heuristics/2-match-system-with-real-world/language-analyzer.js`)
-3. Sends each text line to a language model (LLM) [Free Tier Grok 4] via the OpenRouter API
+3. Sends each text line to a language model (LLM) [meta-llama/llama-4-maverick:free] via the OpenRouter API
 4. Receives and parses any matches of jargon terms
 5. All matched terms are added to the feedback array with explanation and action
+
+> Note: Each time the language model (LLM) is triggered, it may produce different results and detect a varying number of jargon terms.
 
 ### Using OpenRouter API Features 🔐
 
@@ -53,13 +53,15 @@ To use language-based features, you need a free OpenRouter API key:
 2. Log in and go to your dashboard
 3. Click on Button `Create API Key`
 4. Copy your API key (starts with `sk-`)
-5. In VS Code, press `Cmd+Shift+P` → "React UX Analyzer: Set API Key"
+5. In VS Code, press `Cmd+Shift+P` → `🔑 Set OpenRouter API Key`
 6. Paste your key and you're done ✅
+
+Now you can use the command `React UX Analyzer: Analyze Match System with Real World (Nielsen #2: Match Between System & Real World)` to detect internal or technical jargon in React projects.
 
 ## Feedback Example
 ```
-Line 14: Jargon Detected: container - technical software term, use "app" or "program" 
-Action: Use words, phrases, and concepts familiar to the user, see LLM answer..
+Line 14: Jargon detected: locus - instead use key place
+Action: Use words, phrases, and concepts familiar to the user, see LLM answer.
 Why: Users should understand meaning without needing to look it up.
 Heuristic: Nielsen #2: Match Between System and Real World (RUX201)
 More info: https://www.nngroup.com/articles/match-between-system-and-the-real-world/
@@ -85,4 +87,4 @@ This detector supports that by:
 ## Technical Details
 - Based on LLM analysis via OpenRouter
 - Deduplicates identical jargon matches
-- Recognizes certain domain via context input (e.g., health, legal, finance, e-commerce, information technology, education) 
+- Recognizes certain domains via context input (health, legal, finance, e-commerce, information technology, and education) 

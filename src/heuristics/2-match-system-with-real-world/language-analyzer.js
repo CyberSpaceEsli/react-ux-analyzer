@@ -2,7 +2,7 @@
 const analysisCache = new Map();
 
 // Shared fetch logic using Grok4 via OpenRouter
-async function getLLMCompletion(text, apiKey, maxTokens = 100, temperature = 0.3) {
+async function getLLMCompletion(text, apiKey, maxTokens = 200, temperature = 0.3) {
     try {
         const fetch = (await import('node-fetch')).default;
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -14,7 +14,7 @@ async function getLLMCompletion(text, apiKey, maxTokens = 100, temperature = 0.3
                 "X-Title": "react-ux-analyzer",           // Optional
             },
             body: JSON.stringify({
-                model: "x-ai/grok-4-fast:free", 
+                model: "meta-llama/llama-4-maverick:free", 
                 messages: [{ role: "user", content: text }],
                 temperature,
                 reasoning: {
@@ -27,12 +27,16 @@ async function getLLMCompletion(text, apiKey, maxTokens = 100, temperature = 0.3
         });
 
         const raw = await response.json();
+        console.log('OpenRouter API response:', raw);
+
         const data = /** @type {{ choices?: any[], error?: { message?: string } }} */ (raw);
 
         if (!response.ok) {
             console.error('🛑 OpenRouter Error:', data);
             throw new Error(data.error?.message || 'Unknown LLM error');
         }
+
+        
 
         return data.choices?.[0]?.message?.content?.trim() || null; //get nested value from chat-based API response
 
@@ -83,7 +87,7 @@ async function checkForJargon(text, businessDomain = 'general', apiKey) {
     const cacheKey = `${businessDomain}:${text}`;
     if (analysisCache.has(cacheKey)) return analysisCache.get(cacheKey);
 
-    const examples = {
+   /* const examples = {
         health: `
 Examples:
 - ❌ "Initiate diagnostic imaging"
@@ -136,41 +140,35 @@ Examples:
 - ✅ "You need to take another course first"
 - ✅ "You're signed up"
         `
-    };
+    };*/
 
-    const domainExamples = examples[businessDomain] || '';
+    //const domainExamples = examples[businessDomain] || '';
 
     const prompt = `
-You are a professional UX language expert in the ${businessDomain} industry.
+You are a UX language expert in education.
 
-Evaluate the following UI text for clarity and better understanding to non-technical or non-internal users.
+Evaluate the following UI text for difficult-to-understand terms.
 
-Avoid:
-- Technical or developer terms
-- Internal abbreviations (e.g., SKU, RMA)
-- Legal, policy, or clinical jargon
+Instructions (follow EXACTLY):
+- "OK" if user-friendly
+- If the text contains jargon or technical terms, for each term respond **ONLY**: "Jargon detected: [term] – [short explanation] instead use [simpler alternative]"
 
-${domainExamples}
+Do NOT add any extra explanations or text.
 
-Instructions:
-- ✅ "OK" — if the text is clear and user-friendly
-- ⚠️ If it contains technical, complex or internal language, respond only with this exact format: 
-"Jargon detected: [term] – [short explanation + simple alternative]"
-
-Examples:
-- SKU – internal product code, replace with "Product code"
-- Fulfillment center – internal logistics term, say "warehouse"
-
-Dont add any extra explanations or text.
-
-Text to analyze:
-"${text}"
-    `.trim();
+Text to analyze: "${text}"
+`.trim();
 
     try {
-        const result = await getLLMCompletion(prompt, apiKey, 60, 0.2); //60 tokens for detailed response, 0.2 closely to logic with some creativity
+        const result = await getLLMCompletion(prompt, apiKey, 150, 0.1); //150 tokens for jargon response with 0.1 for less randomness
+        console.log('Test jargon detection result:', result);
 
-        if (result.toLowerCase().startsWith('jargon detected')) {
+        if (!result || result.trim() === '') {
+            console.warn('⚠️ Empty response from model');
+            analysisCache.set(cacheKey, null);
+            return null;
+        }
+
+        if (/jargon detected/i.test(result.toLowerCase())) {
             analysisCache.set(cacheKey, result);
             return result;
         } else {

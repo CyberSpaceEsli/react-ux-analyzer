@@ -82,8 +82,10 @@ Issues appear instantly in the **Problems Panel**.
 - VS Code `>= 1.102.0`
 
 #### For Heuristic #2 LLM Analysis:
-- Obtain an API Key from [OpenRouter](https://openrouter.ai/settings/keys)
-- Run Command: `🔑 Set OpenRouter API Key`
+- Login to [OpenRouter](https://openrouter.ai/settings/keys)
+- Obtain an API Key from Button `Create API Key`
+- Copy API key (starts with `sk-`)
+- Run Command: `🔑 Set OpenRouter API Key` and insert Key value
 
 ### For NIMA Visual Quality Analysis:
 - NIMA analysis only works for React projects running on Vite or Create React App (`http://localhost:5173` or `http://localhost:3000`)
