@@ -107,6 +107,34 @@ function activate(context) {
   vscode.window.showInformationMessage('🗑️ OpenRouter API key deleted from secret storage.');
   });
 
+  // Command: Set Target URL for analysis
+  const setTargetUrlCommand = vscode.commands.registerCommand('react-ux-analyzer.setTargetUrl', async () => {
+    const currentUrl = vscode.workspace.getConfiguration('react-ux-analyzer').get('targetUrl') || 'http://localhost:3000';
+    
+    // Pop up input box with to enter localhost URL
+    const newUrl = await vscode.window.showInputBox({
+      prompt: 'Enter the target URL for analysis (NIMA, Heuristic #8, etc.)',
+      value: currentUrl,
+      placeHolder: 'http://localhost:3000'
+    });
+
+    if (!newUrl) {
+      return; // User cancelled
+    }
+
+    // URL-Format validieren
+    try {
+      new URL(newUrl);
+    } catch (err) {
+      vscode.window.showErrorMessage(`❌ Invalid URL format: ${newUrl}`, err);
+      return;
+    }
+
+    // URL speichern
+    await vscode.workspace.getConfiguration('react-ux-analyzer').update('targetUrl', newUrl, true);
+    vscode.window.showInformationMessage(`✅ Target URL set to: ${newUrl}`);
+  });
+
   // Command: Analyze Breadcrumb in current file
   const analyzeBreadcrumbCommand = vscode.commands.registerCommand('react-ux-analyzer.analyzeBreadcrumbs', () => {
     const editor = vscode.window.activeTextEditor;
@@ -379,6 +407,20 @@ function activate(context) {
       return;
     }
 
+    // Get target URL from user input / settings
+    const url = vscode.workspace.getConfiguration('react-ux-analyzer').get('targetUrl');
+    
+    if (!url) {
+      const setUrl = await vscode.window.showInformationMessage(
+        '❌ No target URL set for visual analysis. Please set one first.',
+        'Set URL Now'
+      );
+      if (setUrl === 'Set URL Now') {
+        vscode.commands.executeCommand('react-ux-analyzer.setTargetUrl');
+      }
+      return;
+    }
+
     feedbackHandler.clearAll();
 
     const document = editor.document;
@@ -387,13 +429,18 @@ function activate(context) {
     
     vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
-        title: "Detecting Aesthetic & Minimalism...",
+        title: "Detecting Aesthetic & Minimalism:",
         cancellable: false
       }, async (progress) => {
         try {
-          progress.report({ increment: 30, message: "Running minimalism analysis..." });
-          const issues = await detectAestheticMinimalism(content);
+          progress.report({ increment: 30, message: "Running analysis..." });
+          const issues = await detectAestheticMinimalism(content, url);
           progress.report({ increment: 100, message: "Analysis complete." });
+
+          // Popup message for whitespace screenshots
+          vscode.window.showInformationMessage(
+            '🖼️ Check debug images in "public/react-ux-screenshots" for whitespace detection.',
+          )
 
           feedbackHandler.showResults(fileName, issues.map(issue => ({
             ...issue,
@@ -504,7 +551,22 @@ function activate(context) {
   // Command: Score visual quality with NIMA
   vscode.commands.registerCommand('react-ux-analyzer.analyzeVisualQuality', async () => {
     // Check if dev server is running
-    const url = process.env.REACT_APP_URL || 'http://localhost:5173';
+    //const url = process.env.REACT_APP_URL || 'http://localhost:5173';
+
+    // Get target URL from user input / settings
+    const url = vscode.workspace.getConfiguration('react-ux-analyzer').get('targetUrl');
+
+    if (!url) {
+    const setUrl = await vscode.window.showInformationMessage(
+      '❌ No target URL set. Please set one first.',
+      'Set URL Now'
+    );
+    if (setUrl === 'Set URL Now') {
+      vscode.commands.executeCommand('react-ux-analyzer.setTargetUrl');
+    }
+    return;
+  }
+
     const isRunning = await isServerRunning(url);
     console.log('✅ isRunning:', isRunning);
     feedbackHandler.clearAll();
@@ -524,7 +586,8 @@ function activate(context) {
         },
         async () => {
           try {
-            const { mean, std, error } = await runVisualQualityCheck();
+            //@ts-ignore
+            const { mean, std, error } = await runVisualQualityCheck(url);
             const issues = [];
 
             // feedback information for NIMA score
@@ -616,6 +679,7 @@ function activate(context) {
   // Register all commands
   context.subscriptions.push(setKeyCommand);
   context.subscriptions.push(clearKeyCommand);
+  context.subscriptions.push(setTargetUrlCommand);
   context.subscriptions.push(analyzeProjectCommand);
   context.subscriptions.push(analyzeBreadcrumbCommand);
   context.subscriptions.push(analyzeLoadingCommand);

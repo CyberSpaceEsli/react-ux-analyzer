@@ -12,7 +12,7 @@ async function loadCustomRules() {
   try {
     const config = vscode.workspace.getConfiguration('react-ux-analyzer');
     const fallbackRuleDir = config.get('customRulePath') || 'public/custom-ux-rules';
-    const fallbackUrl = config.get('previewUrl') || 'http://localhost:3000';
+    const fallbackUrl = config.get('targetUrl') || 'http://localhost:3000';
 
     if (!fallbackRuleDir) {
       vscode.window.showInformationMessage('ℹ️ No customRulePath configured in .vscode/settings.json');

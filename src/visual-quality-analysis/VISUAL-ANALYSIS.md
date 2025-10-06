@@ -17,52 +17,35 @@ Visual appeal has measurable effects:
 - Boosts perceived usability
 - Improves retention and user satisfaction
 
-## NIMA Prerequisites
-**Install Python 3**
-- Ensure Python 3 is installed and accessible via your system PATH.
+## NIMA SetUp
+0. **Set Local Dev URL**
+- Run command `🌐 Set Local Dev URL` and insert your localhost url (e.g., `http://localhost:3000`)
+- If you configured the URL already, skip this step
 
-OR
+1. **Install Python 3**
+- Ensure Python 3 is installed, check your Python version
+```bash
+   python3 --version
+```
 
-**Create a virtual environment**
+2. **Create a virtual environment**
 ```bash
    python3 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-Install required Python packages
+3. **Install required Python packages**
 ```bash
    pip install -r dist/python/requirements.txt
-```
-
-## How Visual Quality Detection Works
-1. Take Screenshot of Your App
-- The tool opens the web-app (defined by `REACT_APP_URL`) in a headless browser and captures a full-page screenshot.
-2. Run NIMA Model in Python
-- It then calls a Python script (`python/run_nima.py`) that:
-- Loads the pretrained MobileNet model
-- Evaluates the screenshot
-- Outputs:
-	•	mean: overall visual quality (0 = bad, 10 = excellent)
-	•	std: variation in perceived score
-3. Return Result to Node.js
-Output is parsed and returned to the calling JS environment for integration into feedback dashboards or logs. (`run-nima-checks.js`)
-
-## Supported Localhost URL's
-Only works for react projects made with **Vite** and defaults to **create react app (CRA)**.
-```
-{
-  REACT_APP_URL=http://localhost:5173 || http://localhost:3000
-}
 ```
 
 ## Run NIMA 
 You can run the NIMA visual quality check directly from VS Code using the built-in command palette:
 
 1. Press `Cmd + Shift + P` (macOS) or `Ctrl + Shift + P` (Windows/Linux)
-2. Select or Type 
-Analyze Visual Quality (NIMA)
+2. Select or Type `React Ux Analyzer: Analyze Visual Quality (NIMA)`
 3. The extension will:
-- Take a screenshot of your current app (from `REACT_APP_URL`)
+- Take a screenshot of your current app (from your defined URL at`🌐 Set Local Dev URL`)
 - Analyze it using the NIMA deep learning model
 - Return a score indicating visual aesthetics
 
@@ -83,7 +66,7 @@ Higher standard deviation (std) indicates more variation in the aesthetic judgme
 ## Technical Notes
 - Model: MobileNet (pretrained on AVA dataset)
 - Source: [titu1994/neural-image-assessment](https://github.com/titu1994/neural-image-assessment)
-- Python Dependencies: TensorFlow / Keras, Pillow, numpy
-- For Python to function it needs a correctly configured executable path (`./venv/bin/python3` in default)
-- Node Dependencies: puppeteer (for screenshots), dotenv (for .env config)
-- Output: Mean score from 1–10, standard deviation
+- Python Dependencies: TensorFlow, Pillow, numpy
+- For Python to function it needs a `venv/` with `python3`
+- Node Dependencies: puppeteer (for screenshots)
+- Output: Mean score, standard deviation

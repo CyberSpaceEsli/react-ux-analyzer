@@ -53,8 +53,13 @@
         "title": "🗑️ Clear OpenRouter API Key"
       },
       {
+        "command": "react-ux-analyzer.setTargetUrl",
+        "title": "🌐 Set Local Dev URL",
+        "category": "React UX Analyzer"
+      },
+      {
         "command": "react-ux-analyzer.usabilityAnalyzeReactFiles",
-        "title": "Analyze UX Heuristics (Not #2 & #8)",
+        "title": "Analyze UX Heuristics on JSX Files (Not #2 & #8)",
         "category": "React UX Analyzer"
       },
       {
@@ -123,6 +128,22 @@
         "category": "React UX Analyzer"
       }
     ],
+     "configuration": {
+      "type": "object",
+      "title": "React UX Analyzer",
+      "properties": {
+        "react-ux-analyzer.targetUrl": {
+          "type": "string",
+          "default": "http://localhost:5173",
+          "description": "Target URL for visual quality analysis"
+        },
+        "react-ux-analyzer.customRulePath": {
+          "type": "string",
+          "default": "public/custom-ux-rules",
+          "description": "Path to custom UX rules directory (relative to workspace root)"
+        }
+      }
+    },
     "menus": {
       "explorer/context": [
         {

@@ -10,6 +10,10 @@ This detector analyzes JSX, inline styles, Tailwind classes, and the rendered DO
 
 ## How the Detector Works
 
+### Set Local Dev URL
+- Run command `🌐 Set Local Dev URL` and insert your localhost url (e.g., `http://localhost:3000`)
+- If you configured the URL already, skip this step
+
 ### Main Function: `detectAestheticMinimalism(content, overrideUrl)`
 ```javascript
 

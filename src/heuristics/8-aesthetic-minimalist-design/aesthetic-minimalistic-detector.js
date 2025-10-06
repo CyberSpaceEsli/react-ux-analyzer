@@ -1,5 +1,5 @@
 // aesthetic-minimalistic-detector.js
-require('dotenv').config();
+const vscode = require('vscode');
 const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 const puppeteer = require('puppeteer');
@@ -11,7 +11,7 @@ const { drawElementAreas } = require('./draw-element-areas');
  * detectAestheticMinimalism - Detects color overload, confusing clickable styles, and low whitespace ratio
  * Heuristic: Nielsen #8 - Aesthetic and Minimalist Design
  */
-async function detectAestheticMinimalism(content, overrideUrl) {
+async function detectAestheticMinimalism(content, url) {
   const feedback = [];
 
   //const colorRegex = /(?:text|bg|border|fill|stroke)-(red|blue|green|yellow|purple|pink|orange|teal|cyan|indigo|amber|lime|emerald|fuchsia|violet|rose|sky|slate|gray|zinc|neutral|stone)-(\d{2,3})/gi;
@@ -190,15 +190,32 @@ async function detectAestheticMinimalism(content, overrideUrl) {
   }
 
   // DOM-based analysis for whitespace calculation with image-js
-  const url = overrideUrl || process.env.REACT_APP_URL || 'http://localhost:3000';
 
-  const utilsDir = path.resolve(__dirname, 'utils');
-  if (!fs.existsSync(utilsDir)) fs.mkdirSync(utilsDir, { recursive: true });
+ /*const utilsDir = path.resolve(__dirname, 'utils');
+  if (!fs.existsSync(utilsDir)) fs.mkdirSync(utilsDir, { recursive: true });*/
 
-  // Path for temporary screenshot and mask files in utils fodler
+  // Get workspace root path
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (!workspaceRoot) {
+    throw new Error('No workspace folder opened. Please open your React project folder.');
+  }
+
+  // Mit Timestamp für mehrere Analysen
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19); // 2024-10-06T15-30-45
+  const utilsDir = path.join(workspaceRoot, 'public', 'react-ux-screenshots');
+  if (!fs.existsSync(utilsDir)) {
+  fs.mkdirSync(utilsDir, { recursive: true });
+  }
+
+  // Screenshot files in public folder
+  const screenshotPath = path.join(utilsDir, `screenshot-${timestamp}.png`);
+  const maskPath = path.join(utilsDir, `mask-${timestamp}.json`);
+  const debugImagePath = path.join(utilsDir, `debug-whitespace-${timestamp}.png`);
+
+  /*// Path for temporary screenshot and mask files in utils folder
   const screenshotPath = require('path').join(__dirname, 'utils', 'screenshot.png');
   const maskPath = path.join(utilsDir, 'mask.json');
-  const debugImagePath = path.join(utilsDir, 'debug-whitespace.png');
+  const debugImagePath = path.join(utilsDir, 'debug-whitespace.png');*/
 
   // start puppeteer to screenshot and dom analysis
   const browser = await puppeteer.launch({ headless: true });

@@ -1,25 +1,62 @@
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+//require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+const vscode = require('vscode');
 const { execSync } = require('child_process');
 const fs = require('fs');
 const takeFullPageScreenshot = require('./screenshot/take-screenshot');
 
-async function runNimaCheck() {
+async function runNimaCheck(url) {
   try {
-    // Load URL from .env or fallback
-    const url = process.env.REACT_APP_URL || 'http://localhost:3000';
-    if (!url.startsWith('http')) {
-      throw new Error(`Invalid URL: "${url}" — must start with http://`);
+      // Load URL from .env or fallback
+      //const url = process.env.REACT_APP_URL || 'http://localhost:3000';
+      if (!url) {
+        const config = vscode.workspace.getConfiguration('react-ux-analyzer');
+        url = config.get('targetUrl') || 'http://localhost:3000';
+      }
+
+      if (!url.startsWith('http')) {
+        throw new Error(`Invalid URL: "${url}" — must start with http://`);
+      }
+
+      // Set python and screenshot paths
+      //const debugPythonPath = path.resolve(__dirname, process.env.PYTHON_PATH);
+      //const pythonPath = debugPythonPath;
+
+      // Get workspace root 
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (!workspaceRoot) {
+          throw new Error('No workspace folder opened. Please open your React project folder.');
+      }
+
+      // Adjust the python path according to your OS for venv location in project root
+      const venvPythonPath = path.resolve(workspaceRoot, 'venv/bin/python3'); // Mac/Linux
+      // const venvPythonPath = path.resolve(workspaceRoot, 'venv/Scripts/python.exe'); // Windows
+
+        if (!fs.existsSync(venvPythonPath)) {
+          throw new Error(`Virtual environment not found at: ${venvPythonPath}`);
+        }
+
+      const pythonPath = venvPythonPath;
+
+     try {
+        const version = execSync(`"${pythonPath}" --version`, { encoding: 'utf-8' });
+        console.log('✅ Python version:', version.trim());
+      } catch (err) {
+        throw new Error('Python not found. Please check your virtual environment setup.', err);
+      }
+
+      // Check if required Python packages are available
+      try {
+        const packages = execSync(`"${pythonPath}" -c "import tensorflow, numpy; print('Packages OK')"`, { encoding: 'utf-8' });
+        console.log('✅ Package check:', packages.trim());
+      } catch (err) {
+        throw new Error(`Required packages not found in venv. Error: ${err.message}`);
     }
 
-    // Set python and screenshot paths
-    //const debugPythonPath = path.resolve(__dirname, process.env.PYTHON_PATH);
-    //const pythonPath = debugPythonPath;
-    const pythonPath = 'python3';
     const screenshotPath = path.resolve(__dirname, './screenshot/screenshot.png');
     const scriptPath = path.resolve(__dirname, './python/run_nima.py');
 
-    // 3. Check if Python script exists
+    // Check if Python script exists
     if (!fs.existsSync(scriptPath)) {
       throw new Error(`Python script NIMA not found at: ${scriptPath}`);
     }
@@ -31,7 +68,7 @@ async function runNimaCheck() {
       // @ts-ignore
       await takeFullPageScreenshot(url, screenshotPath);
     } catch (screenshotErr) {
-      throw new Error(`❌ Failed to take screenshot: ${screenshotErr.message}`);
+      throw new Error(`Failed to take screenshot: ${screenshotErr.message}`);
     }
 
     // Run Python scoring
@@ -43,7 +80,7 @@ async function runNimaCheck() {
     { encoding: 'utf-8' }
     );
     } catch (pyErr) {
-      throw new Error(`❌ Python script failed: ${pyErr.message}`);
+      throw new Error(`Python script failed: ${pyErr.message}`);
     }
 
     // Cleanup screenshot
