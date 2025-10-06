@@ -13,7 +13,9 @@ async function runNimaCheck() {
     }
 
     // Set python and screenshot paths
-    const pythonPath = path.resolve(__dirname, './venv/bin/python3');
+    //const debugPythonPath = path.resolve(__dirname, process.env.PYTHON_PATH);
+    //const pythonPath = debugPythonPath;
+    const pythonPath = 'python3';
     const screenshotPath = path.resolve(__dirname, './screenshot/screenshot.png');
     const scriptPath = path.resolve(__dirname, './python/run_nima.py');
 

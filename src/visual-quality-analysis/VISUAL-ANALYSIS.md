@@ -17,25 +17,28 @@ Visual appeal has measurable effects:
 - Boosts perceived usability
 - Improves retention and user satisfaction
 
-## 📂 File Structure
+## NIMA Prerequisites
+**Install Python 3**
+- Ensure Python 3 is installed and accessible via your system PATH.
+
+OR
+
+**Create a virtual environment**
+```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
-📦 visual-quality
- ┣ 📜 run-nima-check.js         // JS orchestrator for the check
- ┣ 📁 screenshot/
- ┃ ┗ 📸 screenshot.png          // Temporary image used for analysis
- ┣ 📁 python/
- ┃ ┣ 📜 run_nima.py             // Python script for running model
- ┃ ┗ 📁 model/
- ┃   ┗ 📦 mobilenet_weights.h5  // Pretrained model weights
- ┣ 📁 venv/                     // Python virtual environment
- ┗ 📜 .env                      // Define REACT_APP_URL here
+
+Install required Python packages
+```bash
+   pip install -r dist/python/requirements.txt
 ```
 
 ## How Visual Quality Detection Works
 1. Take Screenshot of Your App
-The tool opens your app (defined by `REACT_APP_URL`) in a headless browser and captures a full-page screenshot.
+- The tool opens the web-app (defined by `REACT_APP_URL`) in a headless browser and captures a full-page screenshot.
 2. Run NIMA Model in Python
-It then calls a Python script (`python/run_nima.py`) that:
+- It then calls a Python script (`python/run_nima.py`) that:
 - Loads the pretrained MobileNet model
 - Evaluates the screenshot
 - Outputs:
@@ -45,7 +48,7 @@ It then calls a Python script (`python/run_nima.py`) that:
 Output is parsed and returned to the calling JS environment for integration into feedback dashboards or logs. (`run-nima-checks.js`)
 
 ## Supported Localhost URL's
-Only works for react projects made with Vite and defaults to create react app. (CRA)
+Only works for react projects made with **Vite** and defaults to **create react app (CRA)**.
 ```
 {
   REACT_APP_URL=http://localhost:5173 || http://localhost:3000
