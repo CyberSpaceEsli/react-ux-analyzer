@@ -2,7 +2,7 @@
   "name": "react-ux-analyzer",
   "displayName": "React UX Analyzer",
   "description": "Analyzes usability issues based on Nielsen’s 10 heuristics for React (JSX) projects and assesses visual quality with NIMA scoring.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "publisher": "CyberSpaceEsli",
   "galleryBanner": {
     "color": "#673AB7",
