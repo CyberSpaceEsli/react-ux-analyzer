@@ -101,6 +101,9 @@ Issues appear instantly in the **Problems Panel**.
 ### 1.0.1
 - minor bug fixes
 
+### 1.0.2
+- change LLM model to llama-4-maverick
+
 ## About
 This extension was created as a **Master’s Project at TU Chemnitz**.  
 It helps React developers integrate usability heuristics directly into their workflow.
