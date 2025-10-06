@@ -26,8 +26,8 @@ my-project/
 
 ## 3. File Format for Custom Rules
 React-UX-Analyzer loads rules written in **CommonJS format**:
-* If your project uses the default Node.js setup (no `"type": "module"` in `package.json`), use `.cjs` files.
-* If your project is ESM (`"type": "module"` in `package.json`), use `.js` files so they work with `require(...)`.
+* If your project uses the default Node.js setup (no `"type": "module"` in `package.json`), use `.js` files.
+* If your project is ESM (`"type": "module"` in `package.json`), use `.cjs` files so it works with `require(...)`.
 
 ✅ All rule files must export a detector function:
 ```js
