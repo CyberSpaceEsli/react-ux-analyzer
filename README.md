@@ -104,6 +104,9 @@ Issues appear instantly in the **Problems Panel**.
 ### 1.0.2
 - change LLM model to llama-4-maverick
 
+### 1.0.3
+- fix NIMA availability
+
 ## About
 This extension was created as a **Master’s Project at TU Chemnitz**.  
 It helps React developers integrate usability heuristics directly into their workflow.
