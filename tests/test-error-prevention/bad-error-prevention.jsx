@@ -92,6 +92,13 @@ function FetchError() {
     }
 }
 
+// X BAD: Missing try-catch around fetch
+function OnlyFetch() {
+    fetch("/data").catch((error) => {
+      console.log("Fetch failed:", error);
+    });
+}
+
 // Mock component
 function Dialog({ children }) {
   return <div className="dialog">{children}</div>;
@@ -112,5 +119,6 @@ export {
   BadRadioGroupExample,
   FetchWithoutErrorHandling,
   FetchWithDevOnlyError,
+  OnlyFetch,
   FetchError,
 };

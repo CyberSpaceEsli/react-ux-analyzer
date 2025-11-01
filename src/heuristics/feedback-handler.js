@@ -6,7 +6,7 @@ const vscode = require('vscode');
 class FeedbackHandler {
   constructor() {
     this.diagnostics = vscode.languages.createDiagnosticCollection('react-ux-analyzer');
-    this.outputChannel = vscode.window.createOutputChannel('React UX Analyzer');
+    //this.outputChannel = vscode.window.createOutputChannel('React UX Analyzer');
   }
 
   /**
@@ -147,14 +147,14 @@ class FeedbackHandler {
     const links = {
       'BREADCRUMB': 'https://www.nngroup.com/articles/breadcrumbs/',
       'LOADING': 'https://medium.com/design-bootcamp/using-loaders-understanding-their-purpose-types-and-best-practices-a62ca991d472',
-      'MATCH_SYSTEM_REAL_WORLD': 'https://www.nngroup.com/articles/match-between-system-and-the-real-world/',
+      'MATCH_SYSTEM_REAL_WORLD': 'https://www.nngroup.com/articles/match-system-real-world/',
       'CONTROL': 'https://www.nngroup.com/articles/user-control-and-freedom/',
       'CONSISTENCY': 'https://www.nngroup.com/articles/consistency-and-standards/',
       'ERROR_PREVENTION': 'https://www.nngroup.com/articles/error-prevention/',
-      'RECOGNITION': 'https://www.nngroup.com/articles/recognition-vs-recall/',
+      'RECOGNITION': 'https://www.nngroup.com/articles/recognition-and-recall/',
       'FLEXIBILITY_EFFICIENCY': 'https://www.nngroup.com/articles/ui-copy/#toc-guidelines-for-command-shortcuts-3',
-      'AESTHETIC_MINIMALISM': 'https://www.nngroup.com/articles/minimalist-design/',
-      'ERROR_RECOVERY': 'https://www.nngroup.com/articles/help-users-recognize-diagnose-and-recover-from-errors/',
+      'AESTHETIC_MINIMALISM': 'https://www.nngroup.com/articles/aesthetic-minimalist-design/',
+      'ERROR_RECOVERY': 'https://www.nngroup.com/articles/error-message-guidelines/',
       'HELP': 'https://www.nngroup.com/articles/help-and-documentation/',
       'NIMA': 'https://arxiv.org/abs/1709.05424'
     };

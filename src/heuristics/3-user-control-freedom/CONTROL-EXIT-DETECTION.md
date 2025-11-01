@@ -60,7 +60,7 @@ function detectControlExits(content) {
 Exits should be clearly labeled and discoverable.
 
 - User Freedom: Ensures users always have a way out or can undo actions
--  Error Prevention: Helps avoid irreversible mistakes
+- Error Prevention: Helps avoid irreversible mistakes
 - UX Consistency: Encourages consistent modal and form behavior
 - Accessibility: Crucial for keyboard and assistive tech users
 
